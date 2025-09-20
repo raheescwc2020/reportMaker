@@ -6,11 +6,26 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 import os
 import io
+import datetime # Import the datetime module
 
 app = Flask(__name__)
 
+# Updated list of activities
+ACTIVITIES = [
+    'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS',
+    'AWARENESS PROGRAM',
+    'HYGIENE FOCUSED',
+    'CREATING AWARENESS IN SCHOOL CHILDREN',
+    'SAFAI MITRA SURAKSHA SHIVIR',
+    'EK DIN, EK GHANTA, EK SATH – JOINING HANDS FOR NATION’S CLEANLINESS',
+    'FOR CREATING AWARENESS',
+    'CLEANLINESS TARGET UNIT',
+    'SAFAI MITRA WELFARE SCHEME WORKSHOP',
+    'MOTIVATING SAFAI MITRA',
+    'SWACHH BHARAT DIWAS'
+]
+
 # Dummy data for dropdowns
-ACTIVITIES = ['Pledge', 'Stocking', 'Picking', 'Shipping']
 WAREHOUSES = [
 'CW Kunnamthanam',
 'CW Ernakulam',
@@ -44,8 +59,16 @@ def generate_pdf():
     # Get form data
     activity = request.form.get('activity')
     warehouse = request.form.get('warehouse')
-    date_str = request.form.get('date')
+    date_str_yyyy_mm_dd = request.form.get('date') # Original date string from form
+    activity_details = request.form.get('activity_details') 
     images = request.files.getlist('images')
+
+    # Convert the date string to the desired dd-mm-yyyy format
+    try:
+        date_object = datetime.datetime.strptime(date_str_yyyy_mm_dd, '%Y-%m-%d')
+        date_str_dd_mm_yyyy = date_object.strftime('%d-%m-%Y')
+    except (ValueError, TypeError):
+        date_str_dd_mm_yyyy = 'N/A' # Handle potential errors if date is not in expected format
 
     # Define page dimensions and custom margins
     margin = 0
@@ -97,10 +120,27 @@ def generate_pdf():
         rightIndent=content_margin_left
     )
     
-    # Add text content
-    story.append(Paragraph(f'<b>Activity:</b> {activity}', header_style))
-    story.append(Paragraph(f'<b>Warehouse:</b> {warehouse} | <b>Date:</b> {date_str}', subheader_style))
+    # New style for the details section
+    details_style = ParagraphStyle(
+        'Details',
+        parent=styles['Normal'],
+        fontSize=12,
+        spaceAfter=12,
+        leftIndent=content_margin_left,
+        rightIndent=content_margin_left,
+        leading=14 # Line spacing
+    )
+
+    # Add text content using the newly formatted date string
+    story.append(Paragraph(f'{activity}', header_style))
+    story.append(Paragraph(f'<b>Warehouse:</b> {warehouse} | <b>Date:</b> {date_str_dd_mm_yyyy}', subheader_style))
     story.append(Spacer(1, 0.2 * inch))
+
+    # Add the new activity details section
+    if activity_details:
+        story.append(Paragraph(f'<b></b>', details_style))
+        story.append(Paragraph(activity_details.replace('\n', '<br/>'), details_style))
+        story.append(Spacer(1, 0.2 * inch))
 
     # Process and save images
     image_paths = []
