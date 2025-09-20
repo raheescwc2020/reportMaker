@@ -32,4 +32,7 @@ COPY . .
 # Set the command to run your application using the shell form for variable expansion.
 # The ${PORT:-8000} syntax uses the PORT environment variable if available,
 # otherwise, it defaults to 8000.
-CMD gunicorn --bind 0.0.0.0:${PORT:-8000} main:app
+
+
+
+CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app:app

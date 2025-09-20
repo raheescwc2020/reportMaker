@@ -10,8 +10,23 @@ import io
 app = Flask(__name__)
 
 # Dummy data for dropdowns
-ACTIVITIES = ['Receiving', 'Stocking', 'Picking', 'Shipping']
-WAREHOUSES = ['Warehouse A', 'Warehouse B', 'Warehouse C']
+ACTIVITIES = ['Pledge', 'Stocking', 'Picking', 'Shipping']
+WAREHOUSES = [
+'CW Kunnamthanam',
+'CW Ernakulam',
+'CW Kochi (PB)',
+'CW Kakkanad',
+'CW Kanjikode',
+'CW Kakkancherry',
+'CW Trichur',
+'CW Thalassery',
+'CW Edathala',
+'CW Kozhikode',
+'CW Trivandrum',
+'CW Madikkai',
+'CW Kannur']
+
+
 UPLOAD_FOLDER = 'uploads'
 PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png'
 
@@ -32,25 +47,45 @@ def generate_pdf():
     date_str = request.form.get('date')
     images = request.files.getlist('images')
 
-    # Create a PDF in memory
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    # Define page dimensions and custom margins
+    margin = 0
+    doc = SimpleDocTemplate(
+        io.BytesIO(), 
+        pagesize=letter,
+        topMargin=margin,
+        leftMargin=margin,
+        rightMargin=margin,
+        bottomMargin=margin
+    )
+    
     story = []
     styles = getSampleStyleSheet()
 
     # Add header image from a template
     if os.path.exists(PDF_TEMPLATE_IMAGE):
-        header_image = Image(PDF_TEMPLATE_IMAGE, width=7.5 * inch, height=1 * inch)
+        # The image will take the full width of the page
+        header_image_width = letter[0] 
+        header_image_height = 1.0 * inch
+        header_image = Image(PDF_TEMPLATE_IMAGE, width=header_image_width, height=header_image_height)
         story.append(header_image)
+        # Add a spacer to create a visible break before content
         story.append(Spacer(1, 0.2 * inch))
 
-    # Define custom styles
+    # Add content to the story with new margins
+    # The content will now be pushed to the left and top
+    # We need to manually add margins for the content using a ParagraphStyle
+    content_margin_left = 0.5 * inch
+    content_margin_top = 0.5 * inch
+    
+    # Define custom styles with left padding to create a margin
     header_style = ParagraphStyle(
         'Header',
         parent=styles['Heading1'],
         fontSize=18,
         spaceAfter=12,
         alignment=1, # Center alignment
+        leftIndent=content_margin_left,
+        rightIndent=content_margin_left
     )
     subheader_style = ParagraphStyle(
         'Subheader',
@@ -58,8 +93,10 @@ def generate_pdf():
         fontSize=14,
         spaceAfter=6,
         alignment=1, # Center alignment
+        leftIndent=content_margin_left,
+        rightIndent=content_margin_left
     )
-
+    
     # Add text content
     story.append(Paragraph(f'<b>Activity:</b> {activity}', header_style))
     story.append(Paragraph(f'<b>Warehouse:</b> {warehouse} | <b>Date:</b> {date_str}', subheader_style))
@@ -83,14 +120,13 @@ def generate_pdf():
         elif num_images <= 4:
             columns = 2
         else:
-            columns = 3 # A 3-column grid for more than 4 images
+            columns = 3
         
         # Calculate image width and height based on columns and page size
-        margin = 0.5 * inch
-        page_width = letter[0] - 2 * margin
+        page_width = letter[0] - 2 * content_margin_left 
         image_spacing = 5 # 5px margin as requested, which translates to ReportLab's internal unit
         
-        # The image_width is the available page width divided by the number of columns, with spacing removed
+        # The image_width is the available content width divided by the number of columns, with spacing removed
         img_width = (page_width - (columns - 1) * image_spacing) / columns
         img_height = img_width # Keep aspect ratio square for the grid
 
@@ -106,12 +142,9 @@ def generate_pdf():
             data.append(row)
 
         # Create the Table and its style
-        # The 'GRID' command applies a grid of lines, which mimics the margin
-        # We can create a more sophisticated style to represent the 5px margin
-        
-        # Create a Table with a custom style for spacing
         image_table = Table(data, colWidths=[img_width] * columns)
         
+        # We use padding in the TableStyle to create the 5px margin between images
         table_style = TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -119,7 +152,8 @@ def generate_pdf():
             ('RIGHTPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('TOPPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('BOTTOMPADDING', (0, 0), (-1, -1), image_spacing / 2),
-            ('GRID', (0,0), (-1,-1), 0.25, colors.black),
+            ('LEFTPADDING', (0, 0), (0, -1), content_margin_left),
+            ('RIGHTPADDING', (-1, 0), (-1, -1), content_margin_left),
         ])
         image_table.setStyle(table_style)
 
@@ -132,6 +166,7 @@ def generate_pdf():
         os.remove(path)
 
     # Prepare response
+    buffer = doc.filename
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='report.pdf', mimetype='application/pdf')
 
