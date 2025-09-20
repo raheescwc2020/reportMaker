@@ -1,169 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Swachchatha Hi Seva 2025</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f4f4f4;
+ <meta charset="UTF-8">
+ <title>Swachchatha Hi Seva 2025</title>
+ <style>
+  body {
+   font-family: Arial, sans-serif;
+   margin: 20px;
+   background-color: #f4f4f4;
+  }
+  .container {
+   max-width: 600px;
+   margin: auto;
+   background: #fff;
+   padding: 20px;
+   border-radius: 8px;
+   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  h1 {
+   text-align: center;
+   color: #333;
+  }
+  label {
+   display: block;
+   margin-top: 10px;
+   font-weight: bold;
+  }
+  select, input[type="date"], textarea {
+   width: 100%;
+   padding: 8px;
+   margin-top: 5px;
+   box-sizing: border-box;
+   border: 1px solid #ccc;
+   border-radius: 4px;
+  }
+    textarea {
+      resize: vertical; /* Allows vertical resizing of the text area */
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    select, input[type="date"], textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-        textarea {
-            resize: vertical; /* Allows vertical resizing of the text area */
-        }
-    input[type="submit"] {
-      width: 100%;
-      background-color: #5cb85c;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-    input[type="submit"]:hover {
-      background-color: #4cae4c;
-    }
-    #drop-zone {
-      border: 2px dashed #007bff;
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      font-size: 1.2em;
-      color: #666;
-      cursor: pointer;
-      margin-top: 15px;
-    }
-    #drop-zone.dragover {
-      background-color: #e9f5ff;
-      border-color: #0056b3;
-    }
-    #file-list {
-      margin-top: 10px;
-      font-style: italic;
-      color: #555;
-    }
-  </style>
+  input[type="submit"] {
+   width: 100%;
+   background-color: #5cb85c;
+   color: white;
+   padding: 10px 15px;
+   border: none;
+   border-radius: 4px;
+   cursor: pointer;
+   font-size: 16px;
+   margin-top: 20px;
+  }
+  input[type="submit"]:hover {
+   background-color: #4cae4c;
+  }
+  #drop-zone {
+   border: 2px dashed #007bff;
+   border-radius: 8px;
+   padding: 20px;
+   text-align: center;
+   font-size: 1.2em;
+   color: #666;
+   cursor: pointer;
+   margin-top: 15px;
+  }
+  #drop-zone.dragover {
+   background-color: #e9f5ff;
+   border-color: #0056b3;
+  }
+  #file-list {
+   margin-top: 10px;
+   font-style: italic;
+   color: #555;
+  }
+ </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Swachchatha Hi Seva 2025</h1>
-    <form action="/generate_pdf" method="post" enctype="multipart/form-data" id="pdf-form">
-      <label for="activity">Select Activity:</label>
-      <select name="activity" id="activity" required>
-        {% for act in activities %}
-        <option value="{{ act }}">{{ act }}</option>
-        {% endfor %}
+ <div class="container">
+  <h1>Swachchatha Hi Seva 2025</h1>
+  <form action="/generate_pdf" method="post" enctype="multipart/form-data" id="pdf-form">
+   <label for="activity">Select Activity:</label>
+   <select name="activity" id="activity" required>
+    {% for act in activities %}
+    <option value="{{ act }}">{{ act }}</option>
+    {% endfor %}
+   </select>
+
+      <label for="region">Select Region:</label>
+   <select name="region" id="region" required>
+        <option value="" disabled selected>-- Select a Region --</option>
+    {% for reg in regions %}
+    <option value="{{ reg }}">{{ reg }}</option>
+    {% endfor %}
+   </select>
+
+   <label for="warehouse">Select Warehouse:</label>
+   <select name="warehouse" id="warehouse" required disabled>
+        <option value="">-- Select a Region first --</option>
       </select>
 
-      <label for="warehouse">Select Warehouse:</label>
-      <select name="warehouse" id="warehouse" required>
-        {% for wh in warehouses %}
-        <option value="{{ wh }}">{{ wh }}</option>
-        {% endfor %}
-      </select>
+   <label for="date">Select Date:</label>
+   <input type="date" id="date" name="date" required>
+      
+      <label for="activity_details">Details of Activity Done:</label>
+      <textarea id="activity_details" name="activity_details" rows="5" placeholder="Provide a brief description of the activity..."></textarea>
 
-      <label for="date">Select Date:</label>
-      <input type="date" id="date" name="date" required>
-            
-            <label for="activity_details">Details of Activity Done:</label>
-            <textarea id="activity_details" name="activity_details" rows="5" placeholder="Provide a brief description of the activity..."></textarea>
+   <label for="images">Drag & Drop Images:</label>
+   <div id="drop-zone">
+    <p>Drag files here or click to select</p>
+    <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
+   </div>
+   <div id="file-list"></div>
 
-      <label for="images">Drag & Drop Images:</label>
-      <div id="drop-zone">
-        <p>Drag files here or click to select</p>
-        <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
-      </div>
-      <div id="file-list"></div>
+   <input type="submit" value="Generate PDF">
+  </form>
+ </div>
 
-      <input type="submit" value="Generate PDF">
-    </form>
-  </div>
+ <script>
+    // Embed the regional data from Flask into the script
+    const regionalWarehouses = JSON.parse('{{ regional_warehouses | tojson }}');
 
-  <script>
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('images');
-    const fileListDiv = document.getElementById('file-list');
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('images');
+  const fileListDiv = document.getElementById('file-list');
+    const regionSelect = document.getElementById('region');
+    const warehouseSelect = document.getElementById('warehouse');
 
-    // Handle click to open file dialog
-    dropZone.addEventListener('click', () => {
-      fileInput.click();
-    });
+    // Function to update the warehouse dropdown
+    function updateWarehouses() {
+      const selectedRegion = regionSelect.value;
+      warehouseSelect.innerHTML = ''; // Clear existing options
+      warehouseSelect.disabled = true; // Disable until a valid region is selected
 
-    // Handle file selection from dialog
-    fileInput.addEventListener('change', () => {
-      displayFiles(fileInput.files);
-    });
-
-    // Prevent default drag behaviors
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, preventDefaults, false);
-      document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    // Add visual feedback
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-    });
-
-    // Handle dropped files
-    dropZone.addEventListener('drop', handleDrop, false);
-
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    function handleDrop(e) {
-      let dt = e.dataTransfer;
-      let files = dt.files;
-      fileInput.files = files; // Assign files to the hidden input
-      displayFiles(files);
-    }
-
-    function displayFiles(files) {
-      fileListDiv.innerHTML = ''; // Clear previous list
-      if (files.length > 0) {
-        let list = document.createElement('ul');
-        for (let i = 0; i < files.length; i++) {
-          let listItem = document.createElement('li');
-          listItem.textContent = files[i].name;
-          list.appendChild(listItem);
-        }
-        fileListDiv.appendChild(list);
+      if (selectedRegion && regionalWarehouses[selectedRegion]) {
+        const warehouses = regionalWarehouses[selectedRegion].sort();
+        warehouses.forEach(warehouse => {
+          const option = document.createElement('option');
+          option.value = warehouse;
+          option.textContent = warehouse;
+          warehouseSelect.appendChild(option);
+        });
+        warehouseSelect.disabled = false; // Enable the dropdown
+      } else {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Select a Region first --';
+        warehouseSelect.appendChild(defaultOption);
       }
     }
-  </script>
+
+    // Add event listener to the region select dropdown
+    regionSelect.addEventListener('change', updateWarehouses);
+
+  // Handle click to open file dialog
+  dropZone.addEventListener('click', () => {
+   fileInput.click();
+  });
+
+  // Handle file selection from dialog
+  fileInput.addEventListener('change', () => {
+   displayFiles(fileInput.files);
+  });
+
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+   dropZone.addEventListener(eventName, preventDefaults, false);
+   document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  // Add visual feedback
+  ['dragenter', 'dragover'].forEach(eventName => {
+   dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+   dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+  });
+
+  // Handle dropped files
+  dropZone.addEventListener('drop', handleDrop, false);
+
+  function preventDefaults(e) {
+   e.preventDefault();
+   e.stopPropagation();
+  }
+
+  function handleDrop(e) {
+   let dt = e.dataTransfer;
+   let files = dt.files;
+   fileInput.files = files; // Assign files to the hidden input
+   displayFiles(files);
+  }
+
+  function displayFiles(files) {
+   fileListDiv.innerHTML = ''; // Clear previous list
+   if (files.length > 0) {
+    let list = document.createElement('ul');
+    for (let i = 0; i < files.length; i++) {
+     let listItem = document.createElement('li');
+     listItem.textContent = files[i].name;
+     list.appendChild(listItem);
+    }
+    fileListDiv.appendChild(list);
+   }
+  }
+ </script>
 </body>
 </html>
