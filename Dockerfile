@@ -1,6 +1,6 @@
 # Start with an official Python base image
 # Using a specific, well-tested version for better stability
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Install system dependencies required for pycairo and other common libraries
 # The `-y` flag is added to automatically approve installations
