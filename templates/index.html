@@ -1,206 +1,357 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8">
- <title>Swachchatha Hi Seva 2025</title>
- <style>
-  body {
-   font-family: Arial, sans-serif;
-   margin: 20px;
-   background-color: #f4f4f4;
-  }
-  .container {
-   max-width: 600px;
-   margin: auto;
-   background: #fff;
-   padding: 20px;
-   border-radius: 8px;
-   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  }
-  h1 {
-   text-align: center;
-   color: #333;
-  }
-  label {
-   display: block;
-   margin-top: 10px;
-   font-weight: bold;
-  }
-  select, input[type="date"], textarea {
-   width: 100%;
-   padding: 8px;
-   margin-top: 5px;
-   box-sizing: border-box;
-   border: 1px solid #ccc;
-   border-radius: 4px;
-  }
-    textarea {
-      resize: vertical; /* Allows vertical resizing of the text area */
-    }
-  input[type="submit"] {
-   width: 100%;
-   background-color: #5cb85c;
-   color: white;
-   padding: 10px 15px;
-   border: none;
-   border-radius: 4px;
-   cursor: pointer;
-   font-size: 16px;
-   margin-top: 20px;
-  }
-  input[type="submit"]:hover {
-   background-color: #4cae4c;
-  }
-  #drop-zone {
-   border: 2px dashed #007bff;
-   border-radius: 8px;
-   padding: 20px;
-   text-align: center;
-   font-size: 1.2em;
-   color: #666;
-   cursor: pointer;
-   margin-top: 15px;
-  }
-  #drop-zone.dragover {
-   background-color: #e9f5ff;
-   border-color: #0056b3;
-  }
-  #file-list {
-   margin-top: 10px;
-   font-style: italic;
-   color: #555;
-  }
- </style>
+    <meta charset="UTF-8">
+    <title>Swachchatha Hi Seva 2025</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        /* Styles for the navigation bar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            padding: 10px 20px;
+        }
+
+        .navbar a {
+            color: white;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        /* Styles for the dropdown menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown .dropbtn {
+            background-color: #333;
+            color: white;
+            padding: 14px 16px;
+            font-size: 17px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #575757;
+            min-width: 250px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dropdown-content a {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #444;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Tooltip (on hover) styles for the upload link */
+        .upload-link-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltiptext {
+            visibility: hidden;
+            width: 250px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .upload-link-container:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+
+        /* Main Form Container */
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        select, input[type="date"], textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #4cae4c;
+        }
+
+        #drop-zone {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            color: #666;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        #drop-zone.dragover {
+            background-color: #e9f5ff;
+            border-color: #0056b3;
+        }
+
+        #file-list {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
- <div class="container">
-  <h1>Swachchatha Hi Seva 2025</h1>
-  <form action="/generate_pdf" method="post" enctype="multipart/form-data" id="pdf-form">
-   <label for="activity">Select Activity:</label>
-   <select name="activity" id="activity" required>
-    {% for act in activities %}
-    <option value="{{ act }}">{{ act }}</option>
-    {% endfor %}
-   </select>
 
-      <label for="region">Select Region:</label>
-   <select name="region" id="region" required>
-        <option value="" disabled selected>-- Select a Region --</option>
-    {% for reg in regions %}
-    <option value="{{ reg }}">{{ reg }}</option>
-    {% endfor %}
-   </select>
+    <div class="navbar">
+        <div style="flex-grow: 1;"></div>
 
-   <label for="warehouse">Select Warehouse:</label>
-   <select name="warehouse" id="warehouse" required disabled>
-        <option value="">-- Select a Region first --</option>
-      </select>
+        <div class="dropdown">
+            <a href="#" class="dropbtn">MIS Reports</a>
+            <div class="dropdown-content">
+                <a href="https://docs.google.com/spreadsheets/d/1kN4ukYnlZNegB8-hreNOZZLbKTDDuHzZM95MDFkyj_U/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Swachhatha Hi Seva 2025</a>
+            </div>
+        </div>
 
-   <label for="date">Select Date:</label>
-   <input type="date" id="date" name="date" required>
-      
-      <label for="activity_details">Details of Activity Done:</label>
-      <textarea id="activity_details" name="activity_details" rows="5" placeholder="Provide a brief description of the activity..."></textarea>
+        <div style="flex-grow: 1;"></div>
+        
+        <div class="upload-link-container">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLScsTBETav77ifMxxJl9CxRque97_Z4UteeTfq7IQpDCnxkTsw/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                Upload Report
+            </a>
+            <span class="tooltiptext">After generating the report, upload it to this Form</span>
+        </div>
+    </div>
 
-   <label for="images">Drag & Drop Images:</label>
-   <div id="drop-zone">
-    <p>Drag files here or click to select</p>
-    <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
-   </div>
-   <div id="file-list"></div>
+    <div class="container">
+        <h1>Swachchatha Hi Seva 2025</h1>
+        <form action="/generate_pdf" method="post" enctype="multipart/form-data" id="pdf-form">
+            <label for="region">Select Region:</label>
+            <select name="region" id="region" required>
+                <option value="" disabled selected>-- Select a Region --</option>
+                {% for reg in regions %}
+                <option value="{{ reg }}">{{ reg }}</option>
+                {% endfor %}
+            </select>
 
-   <input type="submit" value="Generate PDF">
-  </form>
- </div>
+            <label for="warehouse">Select Warehouse:</label>
+            <select name="warehouse" id="warehouse" required disabled>
+                <option value="">-- Select a Region first --</option>
+            </select>
 
- <script>
-    // Embed the regional data from Flask into the script
-    const regionalWarehouses = JSON.parse('{{ regional_warehouses | tojson }}');
+            <label for="date">Select Date:</label>
+            <input type="date" id="date" name="date" required>
 
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('images');
-  const fileListDiv = document.getElementById('file-list');
-    const regionSelect = document.getElementById('region');
-    const warehouseSelect = document.getElementById('warehouse');
+            <label for="activity">Select Activity:</label>
+            <select name="activity" id="activity" required>
+                {% for act in activities %}
+                <option value="{{ act }}">{{ act }}</option>
+                {% endfor %}
+            </select>
 
-    // Function to update the warehouse dropdown
-    function updateWarehouses() {
-      const selectedRegion = regionSelect.value;
-      warehouseSelect.innerHTML = ''; // Clear existing options
-      warehouseSelect.disabled = true; // Disable until a valid region is selected
+            <div id="activity-name-container" style="margin-top: 10px;">
+                <p><strong>Activity Name:</strong> <span id="activity-name"></span></p>
+            </div>
 
-      if (selectedRegion && regionalWarehouses[selectedRegion]) {
-        const warehouses = regionalWarehouses[selectedRegion].sort();
-        warehouses.forEach(warehouse => {
-          const option = document.createElement('option');
-          option.value = warehouse;
-          option.textContent = warehouse;
-          warehouseSelect.appendChild(option);
+            <label for="images">Drag & Drop Images:</label>
+            <div id="drop-zone">
+                <p>Drag files here or click to select</p>
+                <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
+            </div>
+            <div id="file-list"></div>
+
+            <input type="submit" value="Generate PDF">
+        </form>
+    </div>
+
+    <script>
+        const regionalWarehouses = JSON.parse('{{ regional_warehouses | tojson }}');
+        const activityNames = {
+            'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS': 'Banner Display and Pledge',
+            'AWARENESS PROGRAM': 'Awareness programmes for labours and stake holders at the Warehouses',
+            'HYGIENE FOCUSED': 'Distribution of Dustbin, Gloves, Mask etc to various units like health centres, anganwadis etc.',
+            'CREATING AWARENESS IN SCHOOL CHILDREN': 'Drawing or Essay writing Competition in schools',
+            'SAFAI MITRA SURAKSHA SHIVIR': 'Eye Check up camp for Safaimitra',
+            'EK DIN, EK GHANTA, EK SATH JOINING HANDS FOR NATION’S CLEANLINESS': 'Cleanliness drive in RO/All Warehouses.',
+            'FOR CREATING AWARENESS': 'Bag distribution at prominent locations',
+            'CLEANLINESS TARGET UNIT': 'Cleanliness drive CTUs',
+            'SAFAI MITRA WELFARE SCHEME WORKSHOP': 'Workshop for Safaimitra',
+            'MOTIVATING SAFAI MITRA': 'Facilitation of Safaimitra',
+            'SWACHH BHARAT DIWAS': '"Swachh Bharat Diwas" Plantation Drive'
+        };
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('images');
+        const fileListDiv = document.getElementById('file-list');
+        const regionSelect = document.getElementById('region');
+        const warehouseSelect = document.getElementById('warehouse');
+        const activitySelect = document.getElementById('activity');
+        const activityNameSpan = document.getElementById('activity-name');
+
+        function updateActivityName() {
+            const selectedActivity = activitySelect.value;
+            activityNameSpan.textContent = activityNames[selectedActivity] || '';
+        }
+
+        function updateWarehouses() {
+            const selectedRegion = regionSelect.value;
+            warehouseSelect.innerHTML = '';
+            warehouseSelect.disabled = true;
+
+            if (selectedRegion && regionalWarehouses[selectedRegion]) {
+                const warehouses = regionalWarehouses[selectedRegion].sort();
+                warehouses.forEach(warehouse => {
+                    const option = document.createElement('option');
+                    option.value = warehouse;
+                    option.textContent = warehouse;
+                    warehouseSelect.appendChild(option);
+                });
+                warehouseSelect.disabled = false;
+            } else {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- Select a Region first --';
+                warehouseSelect.appendChild(defaultOption);
+            }
+        }
+
+        activitySelect.addEventListener('change', updateActivityName);
+        regionSelect.addEventListener('change', updateWarehouses);
+        
+        // Set initial activity name on page load
+        document.addEventListener('DOMContentLoaded', updateActivityName);
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
         });
-        warehouseSelect.disabled = false; // Enable the dropdown
-      } else {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = '-- Select a Region first --';
-        warehouseSelect.appendChild(defaultOption);
-      }
-    }
 
-    // Add event listener to the region select dropdown
-    regionSelect.addEventListener('change', updateWarehouses);
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
 
-  // Handle click to open file dialog
-  dropZone.addEventListener('click', () => {
-   fileInput.click();
-  });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
 
-  // Handle file selection from dialog
-  fileInput.addEventListener('change', () => {
-   displayFiles(fileInput.files);
-  });
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-  // Prevent default drag behaviors
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-   dropZone.addEventListener(eventName, preventDefaults, false);
-   document.body.addEventListener(eventName, preventDefaults, false);
-  });
+        fileInput.addEventListener('change', () => {
+            displayFiles(fileInput.files);
+        });
 
-  // Add visual feedback
-  ['dragenter', 'dragover'].forEach(eventName => {
-   dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-  });
+        dropZone.addEventListener('drop', handleDrop, false);
 
-  ['dragleave', 'drop'].forEach(eventName => {
-   dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-  });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
-  // Handle dropped files
-  dropZone.addEventListener('drop', handleDrop, false);
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            fileInput.files = files;
+            displayFiles(files);
+        }
 
-  function preventDefaults(e) {
-   e.preventDefault();
-   e.stopPropagation();
-  }
-
-  function handleDrop(e) {
-   let dt = e.dataTransfer;
-   let files = dt.files;
-   fileInput.files = files; // Assign files to the hidden input
-   displayFiles(files);
-  }
-
-  function displayFiles(files) {
-   fileListDiv.innerHTML = ''; // Clear previous list
-   if (files.length > 0) {
-    let list = document.createElement('ul');
-    for (let i = 0; i < files.length; i++) {
-     let listItem = document.createElement('li');
-     listItem.textContent = files[i].name;
-     list.appendChild(listItem);
-    }
-    fileListDiv.appendChild(list);
-   }
-  }
- </script>
+        function displayFiles(files) {
+            fileListDiv.innerHTML = '';
+            if (files.length > 0) {
+                let list = document.createElement('ul');
+                for (let i = 0; i < files.length; i++) {
+                    let listItem = document.createElement('li');
+                    listItem.textContent = files[i].name;
+                    list.appendChild(listItem);
+                }
+                fileListDiv.appendChild(list);
+            }
+        }
+    </script>
 </body>
 </html>
