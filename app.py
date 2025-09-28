@@ -323,6 +323,100 @@ def admin_add_link():
         links=get_links() # Fetch existing links for a list view on the admin page
     )
 
+
+# --- ROUTING FOR SPREADSHEET MANAGER (Cont.) ---
+
+# ... existing admin_add_link route ...
+
+@app.route('/admin/bulk_upload', methods=['POST'])
+def admin_bulk_upload():
+    """
+    Handles CSV file upload, parses it, and bulk-adds links to the database.
+    Expected CSV format (including header): Name, Category, URL
+    """
+    if not is_admin():
+        flash('You must log in to access the admin console.', 'warning')
+        return redirect(url_for('admin_login'))
+
+    # 1. Check if a file was actually uploaded
+    if 'csv_file' not in request.files:
+        flash('No file part in the request.', 'error')
+        return redirect(url_for('admin_add_link'))
+
+    file = request.files['csv_file']
+
+    if file.filename == '':
+        flash('No selected file.', 'error')
+        return redirect(url_for('admin_add_link'))
+
+    # 2. Validate file extension
+    if not file.filename.endswith('.csv'):
+        flash('Invalid file format. Please upload a CSV file.', 'error')
+        return redirect(url_for('admin_add_link'))
+
+    links_to_add = []
+    links_added = 0
+    links_skipped = 0
+    
+    try:
+        # Read the file data into a string buffer and decode it as UTF-8
+        stream = io.StringIO(file.stream.read().decode("UTF8"))
+        
+        # Use csv.reader to parse the data
+        reader = csv.reader(stream)
+        
+        # 3. Skip header row (assuming Name, Category, URL are the headers)
+        try:
+            next(reader) 
+        except StopIteration:
+            flash('The CSV file is empty.', 'error')
+            return redirect(url_for('admin_add_link'))
+        
+        # 4. Iterate over rows, validate, and prepare for bulk insert
+        for i, row in enumerate(reader):
+            # Clean and validate row data
+            if len(row) >= 3:
+                name = row[0].strip()
+                category = row[1].strip()
+                url = row[2].strip()
+                
+                if name and category and url:
+                    links_to_add.append(Link(name=name, category=category, url=url))
+                else:
+                    links_skipped += 1
+                    print(f"Skipping row {i+2}: Missing Name, Category, or URL.")
+            else:
+                links_skipped += 1
+                print(f"Skipping row {i+2}: Malformed row (expected 3 columns, got {len(row)}).")
+
+        # 5. Perform bulk database insert
+        if links_to_add:
+            db.session.add_all(links_to_add)
+            db.session.commit()
+            links_added = len(links_to_add)
+
+            # 6. Success message
+            if links_skipped > 0:
+                flash(f'Successfully added {links_added} links. {links_skipped} rows were skipped due to missing data or incorrect format.', 'warning')
+            else:
+                flash(f'Successfully added {links_added} spreadsheet links from CSV.', 'success')
+        elif links_skipped > 0:
+            flash(f'No valid links were found in the CSV. {links_skipped} rows were skipped.', 'error')
+        else:
+            flash('The CSV file was processed, but no valid links were found after the header.', 'warning')
+
+    except Exception as e:
+        db.session.rollback()
+        # Catch common duplicate URL errors
+        if 'Duplicate entry' in str(e) or 'IntegrityError' in str(e):
+             flash('Error: Upload failed due to a **duplicate URL** being present in the CSV or already in the database.', 'error')
+        else:
+            flash(f'An unexpected error occurred during CSV processing: {e}', 'error')
+            print(f"CSV Bulk Upload Error: {traceback.format_exc()}")
+            
+    return redirect(url_for('admin_add_link'))
+
+
 @app.route('/admin/logout')
 def admin_logout():
     """Logout and clear the session."""

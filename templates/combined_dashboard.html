@@ -131,11 +131,11 @@
             <!-- ---------------------------------------------------------------------- -->
             <!-- 2. ADMIN ADD LINK CONSOLE -->
             <!-- ---------------------------------------------------------------------- -->
-            {% elif view_name == 'admin_add_view' %}
+         {% elif view_name == 'admin_add_view' %}
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Link Addition Form -->
+                    
                     <div class="lg:col-span-1 bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600 h-fit">
-                        <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-secondary">Add New Link</h3>
+                        <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-secondary">Add Single Link</h3>
                         
                         <form method="POST" action="{{ url_for('admin_add_link') }}" class="space-y-4">
                             <div>
@@ -162,12 +162,36 @@
                         </form>
                     </div>
 
-                    <!-- Current Links Preview (Same as Public View) -->
-                    <div class="lg:col-span-2">
-                         {% include '_spreadsheet_table.html' %} 
+                    <div class="lg:col-span-1">
+                        {% include '_spreadsheet_table.html' %} 
+                    </div>
+
+                    <div class="lg:col-span-1 bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600 h-fit">
+                        <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-primary">Bulk Upload Links (CSV)</h3>
+                        
+                        <form method="POST" action="{{ url_for('admin_bulk_upload') }}" enctype="multipart/form-data" class="space-y-4">
+                            <p class="text-xs text-gray-400 mb-4">
+                                File must be a **CSV** with exactly three columns: 
+                                **Name**, **Category**, **URL**.
+                            </p>
+                            
+                            <div id="csv-drop-zone" 
+                                class="border-2 border-dashed border-primary hover:border-secondary transition duration-200 rounded-lg p-6 text-center cursor-pointer bg-gray-700 hover:bg-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-8 w-8 text-primary mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 014 4v2m-5 4H9m7 0l-3-3m3 3l-3 3"/>
+                                </svg>
+                                <p class="text-sm font-medium text-gray-300">Drag & Drop CSV here or click to select</p>
+                                <input type="file" id="csvFileInput" name="csv_file" accept=".csv" required style="display: none;">
+                            </div>
+                            
+                            <div id="csv-file-name" class="text-sm text-gray-400 text-center mt-2">No file selected.</div>
+
+                            <button type="submit" class="w-full py-3 px-4 bg-primary hover:bg-blue-600 rounded-lg text-white font-bold transition duration-300 shadow-md transform hover:scale-[1.01]">
+                                Process and Update Database
+                            </button>
+                        </form>
                     </div>
                 </div>
-
             <!-- ---------------------------------------------------------------------- -->
             <!-- 3. PUBLIC SPREADSHEET DIRECTORY (Includes Admin View when needed) -->
             <!-- ---------------------------------------------------------------------- -->
@@ -318,6 +342,70 @@
     <!-- Consolidated JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
+            // --- CSV Upload Drag and Drop Logic (NEW) ---
+            const csvDropZone = document.getElementById('csv-drop-zone');
+            const csvFileInput = document.getElementById('csvFileInput');
+            const csvFileName = document.getElementById('csv-file-name');
+
+            if (csvDropZone && csvFileInput) {
+                // Prevent default drag behaviors outside of drop zone (already handled by common code, but good practice)
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    csvDropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                // Highlight drop zone when a file is dragged over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    csvDropZone.addEventListener(eventName, () => csvDropZone.classList.add('dragover'), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    csvDropZone.addEventListener(eventName, () => csvDropZone.classList.remove('dragover'), false);
+                });
+
+                // Trigger file selection on click
+                csvDropZone.addEventListener('click', () => {
+                    csvFileInput.click();
+                });
+
+                csvFileInput.addEventListener('change', () => {
+                    updateCsvFileName(csvFileInput.files);
+                });
+
+                csvDropZone.addEventListener('drop', handleCsvDrop, false);
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                function handleCsvDrop(e) {
+                    let dt = e.dataTransfer;
+                    let files = dt.files;
+                    if (files.length > 0) {
+                        // Ensure only the first file is taken and it's a CSV
+                        if (files[0].name.endsWith('.csv')) {
+                            csvFileInput.files = files; // Set files on the input element
+                            updateCsvFileName(files);
+                        } else {
+                            alert("Please upload a CSV (.csv) file only.");
+                            updateCsvFileName([]);
+                        }
+                    }
+                }
+
+                function updateCsvFileName(files) {
+                    if (files.length > 0) {
+                        csvFileName.textContent = `File Selected: ${files[0].name}`;
+                        csvFileName.classList.remove('text-gray-400');
+                        csvFileName.classList.add('text-secondary');
+                    } else {
+                        csvFileName.textContent = 'No file selected.';
+                        csvFileName.classList.remove('text-secondary');
+                        csvFileName.classList.add('text-gray-400');
+                    }
+                }
+            }
             // --- Shared/Global JS ---
             // Hide flash messages after 4 seconds
             document.querySelectorAll('.flash-message').forEach(msg => {
