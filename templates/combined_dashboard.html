@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | Consolidated Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#3b82f6', /* Blue for primary actions/links */
+                        'secondary': '#10b981', /* Green for success/highlights */
+                        'background-dark': '#1f2937', /* Dark gray background */
+                        'card-dark': '#374151', /* Slightly lighter card background */
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Shared Styles for Flash Messages */
+        .flash-message { opacity: 1; transition: opacity 0.5s ease-out; }
+        .flash-message.hidden { opacity: 0; height: 0; margin: 0; padding: 0; }
+        
+        /* Swachhatha Specific Styles (using CSS where Tailwind is insufficient for fine-tuning) */
+        .nav-link { transition: all 0.2s; }
+        .nav-link:hover { transform: translateY(-1px); }
+        .active-link { border-bottom: 3px solid #3b82f6; color: white !important; }
+        
+        #drop-zone {
+            border: 2px dashed #3b82f6; /* Tailwind primary color */
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 15px;
+            background-color: #4b5563; /* Gray-600 */
+        }
+
+        #drop-zone.dragover {
+            background-color: #6b7280; /* Gray-500 hover */
+            border-color: #10b981; /* Secondary color for dragover */
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-gray-100 font-sans min-h-screen">
+
+    <div class="container mx-auto p-4 sm:p-8">
+        
+        <!-- Top Navigation Bar -->
+        <nav class="flex justify-between items-center bg-card-dark p-4 rounded-xl shadow-lg mb-8">
+            <h1 class="text-3xl font-extrabold text-white">RO KOCHI</h1>
+            <div class="flex space-x-6 text-gray-400 font-medium">
+                <a href="{{ url_for('public_directory') }}" 
+                   class="nav-link text-lg hover:text-white pb-1 {% if view_name == 'spreadsheets_public' or view_name == 'admin_login' or view_name == 'admin_add_view' %}active-link{% endif %}">
+                    Spreadsheet Manager
+                </a>
+                <a href="{{ url_for('swachatha_form') }}" 
+                   class="nav-link text-lg hover:text-white pb-1 {% if view_name == 'swachatha_form' %}active-link{% endif %}">
+                    Swachhatha Report
+                </a>
+            </div>
+            
+            <div class="text-sm">
+                {% if is_admin %}
+                    <a href="{{ url_for('admin_logout') }}" class="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition duration-200">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('admin_login') }}" class="py-2 px-4 bg-primary hover:bg-blue-600 text-white rounded-lg transition duration-200">Admin Login</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <h2 class="text-3xl font-bold text-gray-200 mb-6">{{ page_title }}</h2>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="flash-message p-3 rounded-lg shadow-xl text-white font-semibold 
+                            {% if category == 'success' %} bg-secondary
+                            {% elif category == 'error' %} bg-red-600
+                            {% elif category == 'warning' %} bg-yellow-600
+                            {% else %} bg-gray-500
+                            {% endif %}"
+                        >
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Content Area -->
+        <main>
+            
+            <!-- ---------------------------------------------------------------------- -->
+            <!-- 1. ADMIN LOGIN FORM -->
+            <!-- ---------------------------------------------------------------------- -->
+            {% if view_name == 'admin_login' %}
+                <div class="max-w-md mx-auto bg-card-dark p-8 rounded-xl shadow-2xl border border-gray-600 mt-10">
+                    <h3 class="text-2xl font-bold text-primary mb-6 text-center">Admin Login</h3>
+                    <form method="POST" action="{{ url_for('admin_login') }}" class="space-y-4">
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                            <input type="text" id="username" name="username" required 
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                        </div>
+                        
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                            <input type="password" id="password" name="password" required 
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                        </div>
+
+                        <button type="submit" class="w-full py-3 px-4 bg-primary hover:bg-blue-600 rounded-lg text-white font-bold transition duration-300 shadow-md transform hover:scale-[1.01]">
+                            Login
+                        </button>
+                    </form>
+                    <p class="text-center text-sm text-gray-500 mt-4">
+                        (Demo Credentials: admin / securepassword123)
+                    </p>
+                </div>
+
+            <!-- ---------------------------------------------------------------------- -->
+            <!-- 2. ADMIN ADD LINK CONSOLE -->
+            <!-- ---------------------------------------------------------------------- -->
+            {% elif view_name == 'admin_add_view' %}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Link Addition Form -->
+                    <div class="lg:col-span-1 bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600 h-fit">
+                        <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-secondary">Add New Link</h3>
+                        
+                        <form method="POST" action="{{ url_for('admin_add_link') }}" class="space-y-4">
+                            <div>
+                                <label for="linkName" class="block text-sm font-medium text-gray-300 mb-1">Spreadsheet Name</label>
+                                <input type="text" id="linkName" name="linkName" required placeholder="Q4 Budget Forecast"
+                                    class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                            </div>
+                            
+                            <div>
+                                <label for="linkCategory" class="block text-sm font-medium text-gray-300 mb-1">Category</label>
+                                <input type="text" id="linkCategory" name="linkCategory" required placeholder="Finance, HR, Logistics, etc."
+                                    class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                            </div>
+
+                            <div>
+                                <label for="linkUrl" class="block text-sm font-medium text-gray-300 mb-1">Full Spreadsheet URL</label>
+                                <input type="url" id="linkUrl" name="linkUrl" required placeholder="https://docs.google.com/spreadsheets/d/..."
+                                    class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                            </div>
+
+                            <button type="submit" class="w-full py-3 px-4 bg-secondary hover:bg-green-600 rounded-lg text-white font-bold transition duration-300 shadow-md transform hover:scale-[1.01]">
+                                Save Link
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Current Links Preview (Same as Public View) -->
+                    <div class="lg:col-span-2">
+                         {% include '_spreadsheet_table.html' %} 
+                    </div>
+                </div>
+
+            <!-- ---------------------------------------------------------------------- -->
+            <!-- 3. PUBLIC SPREADSHEET DIRECTORY (Includes Admin View when needed) -->
+            <!-- ---------------------------------------------------------------------- -->
+            {% elif view_name == 'spreadsheets_public' %}
+                <div class="bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600">
+                    <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-primary">Available Spreadsheets</h3>
+
+                    <!-- Search/Filter Bar -->
+                    <div class="mb-6 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <input type="text" id="searchBar" onkeyup="filterTable()" placeholder="Search by Name or Category..."
+                            class="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                        
+                        <select id="categoryFilter" onchange="filterTable()" 
+                            class="sm:w-1/3 w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 appearance-none focus:ring-primary focus:border-primary">
+                            <option value="">All Categories</option>
+                            <!-- Options populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div id="dataTableContainer" class="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-lg border border-gray-700">
+                        <table class="min-w-full divide-y divide-gray-700" id="linkTable">
+                            <thead class="bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Link</th>
+                                </tr>
+                            </thead>
+                            <tbody id="linkTableBody" class="divide-y divide-gray-800">
+                                {% for link in links %}
+                                <tr class="bg-card-dark hover:bg-gray-600 transition duration-150 border-b border-gray-700 data-category-{{ link.category | replace(' ', '-') }}">
+                                    <td class="px-6 py-4 font-medium text-gray-200">{{ link.name }}</td>
+                                    <td class="px-6 py-4 text-sm text-secondary link-category">{{ link.category }}</td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" 
+                                           class="text-primary hover:text-blue-400 font-semibold transition duration-150 inline-flex items-center">
+                                            Open Spreadsheet
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4m-4-7h4m0 0v4m0-4L14 10" />
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if not links %}
+                                <tr>
+                                    <td colspan="3" class="p-4 text-center text-gray-500">No spreadsheets available yet.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+            <!-- ---------------------------------------------------------------------- -->
+            <!-- 4. SWACHHATHA REPORT FORM -->
+            <!-- ---------------------------------------------------------------------- -->
+            {% elif view_name == 'swachatha_form' %}
+                <div class="max-w-xl mx-auto bg-card-dark p-6 rounded-xl shadow-2xl border border-gray-600">
+                    <div class="flex justify-center space-x-4 mb-4 text-sm text-gray-300">
+                        <a href="https://docs.google.com/spreadsheets/d/1kN4ukYnlZNegB8-hreNOZZLbKTDDuHzZM95MDFkyj_U/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-blue-400 font-medium">SHS 2025 Tracker</a>
+                        <a href="/static/swachathCircular.pdf" download="swachathCircular.pdf" class="text-primary hover:text-blue-400 font-medium">Circular Download</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLScsTBETav77ifMxxJl9CxRque97_Z4UteeTfq7IQpDCnxkTsw/viewform?usp=dialog" target="_blank" rel="noopener noreferrer" class="text-secondary hover:text-green-400 font-medium">Upload Report (Form)</a>
+                    </div>
+
+                    <form action="{{ url_for('generate_pdf') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+                        
+                        <div>
+                            <label for="region" class="block text-sm font-medium text-gray-300 mb-1">Select Region:</label>
+                            <select name="region" id="region" required 
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                                <option value="" disabled selected>-- Select a Region --</option>
+                                {% for reg in regions %}
+                                <option value="{{ reg }}">{{ reg }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="warehouse" class="block text-sm font-medium text-gray-300 mb-1">Select Warehouse:</label>
+                            <select name="warehouse" id="warehouse" required disabled
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 focus:ring-primary focus:border-primary">
+                                <option value="">-- Select a Region first --</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="date" class="block text-sm font-medium text-gray-300 mb-1">Select Date:</label>
+                            <input type="date" id="date" name="date" required 
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                        </div>
+
+                        <div>
+                            <label for="activity" class="block text-sm font-medium text-gray-300 mb-1">Select Activity:</label>
+                            <select name="activity" id="activity" required 
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
+                                {% for act in activities %}
+                                <option value="{{ act }}">{{ act }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="p-3 bg-gray-700 rounded-lg">
+                            <p class="text-sm font-medium text-gray-300"><strong>Activity Name:</strong> <span id="activity-name" class="text-white font-semibold"></span></p>
+                        </div>
+
+                        <div>
+                            <label for="images" class="block text-sm font-medium text-gray-300 mb-1">Drag & Drop Images:</label>
+                            <div id="drop-zone" class="text-gray-300">
+                                <p>Drag image files here or click to select</p>
+                                <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
+                            </div>
+                            <div id="file-list" class="mt-2 text-sm text-gray-400"></div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 px-4 bg-secondary hover:bg-green-600 rounded-lg text-white font-bold transition duration-300 shadow-md transform hover:scale-[1.01]">
+                            Generate PDF
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- Consolidated JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Shared/Global JS ---
+            // Hide flash messages after 4 seconds
+            document.querySelectorAll('.flash-message').forEach(msg => {
+                setTimeout(() => {
+                    msg.classList.add('hidden');
+                }, 4000);
+            });
+            
+            // --- SPREADSHEET MANAGER JS (Public View) ---
+            const linkTableBody = document.getElementById('linkTableBody');
+            if (linkTableBody) {
+                const categoryFilter = document.getElementById('categoryFilter');
+                const categories = new Set();
+                
+                // Collect unique categories and populate the filter dropdown
+                if (categoryFilter) {
+                    linkTableBody.querySelectorAll('.link-category').forEach(cell => {
+                        categories.add(cell.textContent.trim());
+                    });
+
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categoryFilter.appendChild(option);
+                    });
+                }
+            }
+
+            // --- SWACHHATHA FORM JS ---
+     
+            const regionalWarehouses = JSON.parse('{{ regional_warehouses | default([]) | tojson }}');
+            const activityNames = {
+                'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS': 'Banner Display and Pledge',
+                'AWARENESS PROGRAM': 'Awareness programmes for labours and stake holders at the Warehouses',
+                'HYGIENE FOCUSED': 'Distribution of Dustbin, Gloves, Mask etc to various units like health centres, anganwadis etc.',
+                'CREATING AWARENESS IN SCHOOL CHILDREN': 'Drawing or Essay writing Competition in schools',
+                'SAFAI MITRA SURAKSHA SHIVIR': 'Eye Check up camp for Safaimitra',
+                'EK DIN, EK GHANTA, EK SATH - JOINING HANDS FOR NATIONS CLEANLINESS': 'Cleanliness drive in RO/All Warehouses.',
+                'FOR CREATING AWARENESS': 'Bag distribution at prominent locations',
+                'CLEANLINESS TARGET UNIT': 'Cleanliness drive CTUs',
+                'SAFAI MITRA WELFARE SCHEME WORKSHOP': 'Workshop for Safaimitra',
+                'MOTIVATING SAFAI MITRA': 'Facilitation of Safaimitra',
+                'SWACHH BHARAT DIWAS': '"Swachh Bharat Diwas" Plantation Drive'
+            };
+
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('images');
+            const fileListDiv = document.getElementById('file-list');
+            const regionSelect = document.getElementById('region');
+            const warehouseSelect = document.getElementById('warehouse');
+            const activitySelect = document.getElementById('activity');
+            const activityNameSpan = document.getElementById('activity-name');
+
+            function updateActivityName() {
+                if (!activitySelect || !activityNameSpan) return;
+                const selectedActivity = activitySelect.value;
+                activityNameSpan.textContent = activityNames[selectedActivity] || '';
+            }
+
+            function updateWarehouses() {
+                if (!regionSelect || !warehouseSelect) return;
+                const selectedRegion = regionSelect.value;
+                warehouseSelect.innerHTML = '';
+                warehouseSelect.disabled = true;
+
+                if (selectedRegion && regionalWarehouses[selectedRegion]) {
+                    const warehouses = regionalWarehouses[selectedRegion].sort();
+                    warehouses.forEach(warehouse => {
+                        const option = document.createElement('option');
+                        option.value = warehouse;
+                        option.textContent = warehouse;
+                        warehouseSelect.appendChild(option);
+                    });
+                    warehouseSelect.disabled = false;
+                } else {
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '-- Select a Region first --';
+                    warehouseSelect.appendChild(defaultOption);
+                }
+            }
+
+            if (activitySelect && regionSelect) {
+                activitySelect.addEventListener('change', updateActivityName);
+                regionSelect.addEventListener('change', updateWarehouses);
+                updateActivityName(); // Set initial activity name on page load
+                updateWarehouses(); // Set initial state for warehouses
+            }
+
+            // Drag and Drop Logic
+            if (dropZone && fileInput) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false); // Prevent global drop behavior
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+                });
+
+                dropZone.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                fileInput.addEventListener('change', () => {
+                    displayFiles(fileInput.files);
+                });
+
+                dropZone.addEventListener('drop', handleDrop, false);
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                function handleDrop(e) {
+                    let dt = e.dataTransfer;
+                    let files = dt.files;
+                    fileInput.files = files; // Set files on the input element
+                    displayFiles(files);
+                }
+
+                function displayFiles(files) {
+                    fileListDiv.innerHTML = '';
+                    if (files.length > 0) {
+                        let list = document.createElement('ul');
+                        list.className = 'list-disc list-inside space-y-1';
+                        for (let i = 0; i < files.length; i++) {
+                            let listItem = document.createElement('li');
+                            listItem.textContent = files[i].name;
+                            list.appendChild(listItem);
+                        }
+                        fileListDiv.appendChild(list);
+                    } else {
+                        fileListDiv.textContent = 'No files selected.';
+                    }
+                }
+            }
+        }); // End DOMContentLoaded
+
+        // Function for Spreadsheet Search/Filter (must be global or in a closure available to onkeyup/onchange)
+        function filterTable() {
+            const searchInput = document.getElementById('searchBar').value.toUpperCase();
+            const selectedCategory = document.getElementById('categoryFilter').value;
+            const table = document.getElementById('linkTable');
+            const rows = table ? table.getElementsByTagName('tr') : [];
+
+            // Start loop from index 1 to skip the header row
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const nameCell = row.cells[0];
+                const categoryCell = row.cells[1];
+
+                if (!nameCell || !categoryCell) continue;
+
+                const nameText = nameCell.textContent.toUpperCase();
+                const categoryText = categoryCell.textContent;
+
+                let nameMatch = nameText.includes(searchInput);
+                let categoryMatch = (selectedCategory === "" || categoryText === selectedCategory);
+
+                if (nameMatch && categoryMatch) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            }
+        }
+    </script>
+     <footer class="bg-gray-800 text-white mt-12 py-10 rounded-t-xl shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-gray-700 pb-8">
+                
+                <!-- Column 1: Brand Info -->
+                <div class="space-y-3 col-span-2 md:col-span-1">
+                    <h3 class="text-xl font-bold text-primary-blue">ReportFlow</h3>
+                    <p class="text-sm text-gray-400">
+                        Modern and effective data reporting solutions for clear insights.
+                    </p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="text-md font-semibold mb-4 border-l-4 border-primary-blue pl-2">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Dashboard Home</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Data Sources</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Pricing</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">FAQs</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Support -->
+                <div>
+                    <h4 class="text-md font-semibold mb-4 border-l-4 border-primary-blue pl-2">Support</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Help Center</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Contact Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition duration-200 text-sm">Terms of Service</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Social Media -->
+                <div class="col-span-2 md:col-span-1">
+                    <h4 class="text-md font-semibold mb-4 border-l-4 border-primary-blue pl-2">Connect</h4>
+                    <div class="flex space-x-4">
+                        <!-- Placeholder for icons (e.g., Lucide or FontAwesome) -->
+                        <a href="#" class="text-gray-400 hover:text-primary-blue transition duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary-blue transition duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.546 6.096c-.34-.515-3.033-1.428-5.748-1.503-.96-.027-1.898-.045-2.65-.05A17.16 17.16 0 0 0 12 4c-3.238 0-5.834.02-8.312.043-.75.005-1.69.023-2.65.05C.64 4.668-.344 6.82 2.62 10.375c-.34.515-.55 1.1-.6 1.765-.05.665-.06 1.34-.06 2 0 .66.01 1.335.06 2 .05.665.26 1.25.6 1.765C1.868 18.06 4.71 18.97 7.425 19.045c.96.027 1.898.045 2.65.05A17.16 17.16 0 0 0 12 20c3.238 0 5.834-.02 8.312-.043.75-.005 1.69-.023 2.65-.05.34-.515.55-1.1.6-1.765.05-.665.06-1.34.06-2 0-.66-.01-1.335-.06-2-.05-.665-.26-1.25-.6-1.765zM9.75 14.5l5.5-3.5-5.5-3.5v7z"/></svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary-blue transition duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c1.7 1.3 3.7 2.1 5.7 2.1A10.64 10.64 0 0 0 22 4.07z"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Copyright Notice -->
+            <div class="mt-8 pt-4 text-center text-sm text-gray-400 border-t border-gray-700">
+                &copy; 2024. ALL COPYRIGHT RECEIVED. Developed and Maintained by Rahees Mohammed R, Project Manager, RV Solutions.
+            </div>
+        </div>
+    </footer>
+
+
+</body>
+</html>

@@ -1,18 +1,76 @@
-import io
-import datetime  # Import the datetime module
-import json
 import os
-from flask import Flask, render_template, request, send_file
+import json
+import io
+import datetime
 
+# Database imports
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import Mapped, mapped_column
+
+# Reportlab imports
 from reportlab.platypus import SimpleDocTemplate, Image, Table, TableStyle, Spacer, Paragraph
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
 
-app = Flask(__name__)
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+# IMPORTANT: Need to use mysql+pymysql:// prefix for SQLAlchemy with MySQL
+# We will ensure this is handled by the Railway environment variable or 
+# configure it explicitly if using components from the screenshot variables.
+# However, using the full DATABASE_URL (which usually includes the driver) is best practice.
 
-# Updated list of activities
+
+# --- FLASK APPLICATION SETUP ---
+app = Flask(__name__)
+app.secret_key = 'super_secret_and_complex_key_for_session_management' 
+
+# 1. DATABASE CONFIGURATION
+# This uses the standard DATABASE_URL environment variable provided by Railway.
+# The URL includes the driver, username, password, host, and database name.
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 
+    'sqlite:///links.db' # Fallback for local testing
+)
+db = SQLAlchemy(app)
+
+# --- DATABASE MODEL (Schema) ---
+
+class Link(db.Model):
+    """
+    Defines the structure for the 'spreadsheet_manager' table.
+    """
+    __tablename__ = 'spreadsheet_manager' 
+    
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(100), nullable=False)
+    category: Mapped[str] = mapped_column(db.String(50), nullable=False)
+    url: Mapped[str] = mapped_column(db.String(255), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f'<Link {self.name}>'
+
+
+# --- SPREADSHEET MANAGER CONFIG/DATA ---
+ADMIN_USER = "admin"
+ADMIN_PASS = "securepassword123"
+
+# Spreadsheet Helper Functions
+def is_admin():
+    """Checks if the user is authenticated as an admin."""
+    return session.get('logged_in', False)
+
+def get_links():
+    """Fetches all stored links from the database (spreadsheet_manager table)."""
+    # Queries all Link objects, ordered by ID (creation order)
+    try:
+        return db.session.execute(db.select(Link).order_by(Link.id)).scalars().all()
+    except Exception as e:
+        print(f"Database fetch error: {e}")
+        flash("Could not connect to or query the database.", 'error')
+        return []
+
+# --- SWACHHATHA REPORT CONFIG/DATA ---
 ACTIVITIES = [
     'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS',
     'AWARENESS PROGRAM',
@@ -27,15 +85,13 @@ ACTIVITIES = [
     'SWACHH BHARAT DIWAS'
 ]
 
-# Consolidated list of all warehouses from the previous table and the provided file
 REGIONAL_WAREHOUSES = {
-
     'Ahmedabad': ['CW Shahalam', 'CW Anand', 'CW Baroda-I', 'CW Pipavav', 'CW Rajkot', 'CW Surat', 'CW Dantewada', 'CW Jagdalpur', 'CW Raigarh', 'CW Raipur', 'CW Kandla Port', 'CFS Mundra', 'CRWC Kandla', 'CW Rajkot (Hired)', 'CW Jamnagar'],
     'Bangalore': ['CW Belgachhia', 'CW Chikkaballapur', 'CW Tumkur', 'CW Belgaum', 'CW Mysore', 'CW Gadag', 'CW Dharwad', 'CW Mandya', 'CW Hubballi', 'CW Mangalore', 'CW Panambur'],
     'Bhopal': ['CW Bhopal', 'CW Jabalpur', 'CW Rewa', 'CW Chhindwara', 'CW Sagar', 'CW Neemuch', 'CW Damoh', 'CW Katni', 'CW Gwalior', 'CW Satna', 'CW Khandwa'],
     'Bhubaneshwar': ['CW Junagarh', 'CW Kendupalli-I', 'CW Kendupalli-II', 'CW Koksara', 'CW Kalamati', 'CW Nabrangpur', 'CW Bhubaneswar-I', 'CW Bhubaneswar-II', 'CW Balasore', 'CW Cuttack', 'CW Rourkela', 'CW Sambalpur', 'CW Jeypore', 'CW Paradeep', 'CW Angul', 'CW Bhawanipatna', 'CW Talcher'],
     'Chandigarh': ['CW Chandigarh', 'CW Faridkot', 'CW Amritsar', 'CW Firozpur', 'CW Ludhiana', 'CW Patiala', 'CW Mohali', 'CW Jalandhar', 'CW Gurdaspur', 'CW Sangrur', 'CW Bathinda', 'CW Samana', 'CW Kotkapura', 'CW Muktsar', 'CW Pathankot', 'CW Rupnagar', 'CW Sirhind', 'CW Hoshiarpur', 'CW Abohar', 'CW Malout', 'CW Phagwara', 'CW Moga', 'CW Nawanshahar', 'CW Tarntaran'],
-    'Guwahati': ['CW Agartala', 'CW Dimapur', 'CW Imphal', 'CW Silchar', 'CW Shillong', 'CW Mirza', 'CW Guwahati', 'CW Dhaligaon', 'CW Goalpara', 'CW Jorhat', 'CW Dibrugarh', 'CW Aizawl', 'CW Gangtok', 'CW Silchar'],
+    'Guwahati': ['CW Agartala', 'CW Dimapur', 'CW Imphal', 'CW Silchar', 'CW Shillong', 'CW Mirza', 'CW Guwahati', 'CW Dhaligaon', 'CW Goalpara', 'CW Jorhat', 'CW Dibrugarh', 'CW Aizawl', 'CW Gangtok', 'CW Guwahati', 'CW Silchar'],
     'Hyderabad': ['CW Hyderabad', 'CW Godavari', 'CW Vijayawada', 'CW Visakhapatnam', 'CW Kakinada', 'CW Warangal', 'CW Khammam', 'CW Karimnagar', 'CW Tirupati', 'CW Guntur'],
     'Jaipur': ['CW Jaipur', 'CW Alwar', 'CW Bikaner', 'CW Bharatpur', 'CW Jodhpur', 'CW Pali', 'CW Sikar', 'CW Kota', 'CW Bundi'],
     'Kolkata': ['CW Kolkata', 'CW Howrah', 'CW Siliguri', 'CW Durgapur', 'CW Malda', 'CW Krishnanagar', 'CW Port Blair', 'CW Balurghat', 'CW Haldia', 'CW Ranaghat'],
@@ -48,22 +104,119 @@ REGIONAL_WAREHOUSES = {
 }
 
 UPLOAD_FOLDER = 'uploads'
-PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png'
+PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png' 
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
+# --- ROUTING FOR SPREADSHEET MANAGER ---
+
 @app.route('/')
-def index():
-    # Get a sorted list of regions to populate the first dropdown
+@app.route('/spreadsheets')
+def public_directory():
+    """The Public View: Shows all links in a searchable table, fetching data from the database."""
+    return render_template(
+        'combined_dashboard.html', 
+        page_title="Spreadsheet Directory",
+        links=get_links(), # Fetches from DB
+        is_admin=is_admin(),
+        view_name='spreadsheets_public'
+    )
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin Login Console."""
+    if is_admin():
+        return redirect(url_for('admin_add_link'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username == ADMIN_USER and password == ADMIN_PASS:
+            session['logged_in'] = True
+            flash('Logged in successfully!', 'success')
+            return redirect(url_for('admin_add_link'))
+        else:
+            flash('Invalid credentials. Please try again.', 'error')
+
+    return render_template(
+        'combined_dashboard.html', 
+        page_title="Admin Login",
+        is_admin=is_admin(),
+        view_name='admin_login'
+    )
+
+@app.route('/admin/add', methods=['GET', 'POST'])
+def admin_add_link():
+    """Admin Console: Add New Link Form. Saves new links to the 'spreadsheet_manager' table."""
+    if not is_admin():
+        flash('You must log in to access the admin console.', 'warning')
+        return redirect(url_for('admin_login'))
+
+    if request.method == 'POST':
+        link_name = request.form.get('linkName', '').strip()
+        link_category = request.form.get('linkCategory', '').strip()
+        link_url = request.form.get('linkUrl', '').strip()
+
+        if link_name and link_category and link_url:
+            new_link = Link(
+                name=link_name,
+                category=link_category,
+                url=link_url
+            )
+            try:
+                db.session.add(new_link)
+                db.session.commit()
+                flash(f'Link "{link_name}" added successfully to the database!', 'success')
+                return redirect(url_for('admin_add_link')) 
+            except Exception as e:
+                db.session.rollback()
+                if 'Duplicate entry' in str(e) or 'IntegrityError' in str(e):
+                    flash('Error: A link with that URL already exists.', 'error')
+                else:
+                    flash(f'Error adding link: {e}', 'error')
+        else:
+            flash('All fields are required.', 'error')
+
+    return render_template(
+        'combined_dashboard.html', 
+        page_title="Admin Console: Add Link",
+        is_admin=is_admin(),
+        view_name='admin_add_view',
+        links=get_links()
+    )
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Logout and clear the session."""
+    session.pop('logged_in', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('public_directory'))
+
+
+# --- ROUTING FOR SWACHHATHA REPORT GENERATOR ---
+
+@app.route('/swachatha')
+def swachatha_form():
+    """The Swachhatha View: Shows the PDF generation form."""
     regions = sorted(REGIONAL_WAREHOUSES.keys())
-    return render_template('index.html', activities=ACTIVITIES, regional_warehouses=REGIONAL_WAREHOUSES, regions=regions)
+    return render_template(
+        'combined_dashboard.html', 
+        page_title="Swachhatha Report Generator",
+        activities=ACTIVITIES, 
+        regional_warehouses=REGIONAL_WAREHOUSES, 
+        regions=regions,
+        view_name='swachatha_form',
+        is_admin=is_admin()
+    )
 
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
-    # Mapping from SWACHH UTSAV 2025 activity to ACTIVITY NAME
+    """Generates the PDF report based on form submission."""
     activity_name_map = {
         'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS': 'Banner Display and Pledge',
         'AWARENESS PROGRAM': 'Awareness programmes for labours and stake holders at the Warehouses',
@@ -83,23 +236,21 @@ def generate_pdf():
     region = request.form.get('region')
     warehouse = request.form.get('warehouse')
     date_str_yyyy_mm_dd = request.form.get('date')
-    activity_details = request.form.get('activity_details')
     images = request.files.getlist('images')
 
-    # Get the corresponding "ACTIVITY NAME" from the map
     activity_name = activity_name_map.get(activity, 'N/A')
 
-    # Convert the date string to the desired dd-mm-yyyy format
     try:
         date_object = datetime.datetime.strptime(date_str_yyyy_mm_dd, '%Y-%m-%d')
         date_str_dd_mm_yyyy = date_object.strftime('%d-%m-%Y')
     except (ValueError, TypeError):
         date_str_dd_mm_yyyy = 'N/A'
 
-    # Define page dimensions and custom margins
+    # Setup PDF document
+    buffer = io.BytesIO()
     margin = 0
     doc = SimpleDocTemplate(
-        io.BytesIO(),
+        buffer,
         pagesize=letter,
         topMargin=margin,
         leftMargin=margin,
@@ -110,7 +261,7 @@ def generate_pdf():
     story = []
     styles = getSampleStyleSheet()
 
-    # Add header image from a template
+    # Add header image
     if os.path.exists(PDF_TEMPLATE_IMAGE):
         header_image_width = letter[0]
         header_image_height = 1.0 * inch
@@ -118,40 +269,8 @@ def generate_pdf():
         story.append(header_image)
         story.append(Spacer(1, 0.2 * inch))
 
-    # Add content to the story with new margins
+    # Define styles
     content_margin_left = 0.5 * inch
-
-    header_style = ParagraphStyle(
-        'Header',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=6,
-        alignment=1,
-        leftIndent=content_margin_left,
-        rightIndent=content_margin_left
-    )
-    subheader_style = ParagraphStyle(
-        'Subheader',
-        parent=styles['Heading2'],
-        fontSize=14,
-        spaceAfter=12,
-        alignment=1,
-        leftIndent=content_margin_left,
-        rightIndent=content_margin_left
-    )
-    details_style = ParagraphStyle(
-        'Details',
-        parent=styles['Normal'],
-        fontSize=12,
-        spaceAfter=12,
-        leftIndent=content_margin_left,
-        rightIndent=content_margin_left,
-        leading=14
-    )
-
-    # Get the default stylesheet
-    styles = getSampleStyleSheet()
-    # Add text content
     header_style = ParagraphStyle(
         'UnderlinedHeader',
         parent=styles['Normal'],
@@ -161,29 +280,29 @@ def generate_pdf():
         alignment=TA_CENTER,
         underline=True
     )
-
-    # Create a new style for the smaller, bolded activity name
     activity_name_style = ParagraphStyle(
         'BoldActivityName',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=12,  # Adjust the size as needed
+        fontSize=12,
         leading=14,
         alignment=TA_CENTER
     )
+    subheader_style = ParagraphStyle(
+        'Subheader',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=12,
+        alignment=TA_CENTER,
+    )
 
-    # Your existing code with the new styles
+    # Add text content
     story.append(Paragraph(f'{activity}', header_style))
     story.append(Paragraph(f'{activity_name}', activity_name_style))
     story.append(Paragraph(f'<b>Location:</b> {warehouse} under {region} Region | <b>Date:</b> {date_str_dd_mm_yyyy}', subheader_style))
     story.append(Spacer(1, 0.2 * inch))
 
-    # Add the activity details section
-    if activity_details:
-        story.append(Paragraph(f'<b>Activity Details:</b> {activity_details}', details_style))
-        story.append(Spacer(3, 0.2 * inch))
-
-    # Process and save images
+    # Process and add images
     image_paths = []
     for img in images:
         if img.filename != '':
@@ -193,17 +312,12 @@ def generate_pdf():
 
     if image_paths:
         num_images = len(image_paths)
-        if num_images == 1:
-            columns = 1
-        elif num_images <= 4:
-            columns = 2
-        else:
-            columns = 3
+        columns = 3 if num_images > 4 else (2 if num_images > 1 else 1)
 
         page_width = letter[0] - 2 * content_margin_left
         image_spacing = 5
         img_width = (page_width - (columns - 1) * image_spacing) / columns
-        img_height = img_width
+        img_height = img_width 
 
         data = []
         row = []
@@ -215,6 +329,7 @@ def generate_pdf():
         if row:
             data.append(row)
 
+        # Create table for images
         image_table = Table(data, colWidths=[img_width] * columns)
         table_style = TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -227,20 +342,47 @@ def generate_pdf():
             ('RIGHTPADDING', (-1, 0), (-1, -1), content_margin_left),
         ])
         image_table.setStyle(table_style)
-
         story.append(image_table)
 
     doc.build(story)
 
     # Clean up uploaded images
     for path in image_paths:
-        os.remove(path)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
     # Prepare response
-    buffer = doc.filename
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='report.pdf', mimetype='application/pdf')
 
 
 if __name__ == '__main__':
+    # Ensure all necessary folders exist
+    if not os.path.exists('templates'):
+        os.makedirs('templates')
+    if not os.path.exists('static'):
+        os.makedirs('static')
+    if not os.path.exists('uploads'):
+        os.makedirs('uploads')
+    
+    # --- DB INIT AND SEEDING ---
+    with app.app_context():
+        # This creates the 'spreadsheet_manager' table if it doesn't exist.
+        db.create_all()
+        
+        # This seeds initial data if the table is empty.
+        if db.session.execute(db.select(Link)).scalar() is None: 
+             print("Database table 'spreadsheet_manager' is empty. Adding initial links.")
+             initial_links = [
+                Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
+                Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
+                Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
+             ]
+             db.session.add_all(initial_links)
+             db.session.commit()
+             print("Initial links added successfully.")
+    # --- DB INIT AND SEEDING END ---
+        
     app.run(debug=True)

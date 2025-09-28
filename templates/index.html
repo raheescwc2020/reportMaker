@@ -68,6 +68,11 @@
         .dropdown-content a:hover {
             background-color: #444;
         }
+        
+        /* Adds a separator line between sub-menu items */
+        .dropdown-content a + a {
+            border-top: 1px solid #666;
+        }
 
         .dropdown:hover .dropdown-content {
             display: block;
@@ -189,11 +194,12 @@
 
     <div class="navbar">
         <div style="flex-grow: 1;"></div>
-
+        
         <div class="dropdown">
             <a href="#" class="dropbtn">MIS Reports</a>
             <div class="dropdown-content">
                 <a href="https://docs.google.com/spreadsheets/d/1kN4ukYnlZNegB8-hreNOZZLbKTDDuHzZM95MDFkyj_U/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Swachhatha Hi Seva 2025</a>
+                <a href="/static/swachathCircular.pdf" download="swachathCircular.pdf">Circular</a>
             </div>
         </div>
 
@@ -256,7 +262,7 @@
             'HYGIENE FOCUSED': 'Distribution of Dustbin, Gloves, Mask etc to various units like health centres, anganwadis etc.',
             'CREATING AWARENESS IN SCHOOL CHILDREN': 'Drawing or Essay writing Competition in schools',
             'SAFAI MITRA SURAKSHA SHIVIR': 'Eye Check up camp for Safaimitra',
-            'EK DIN, EK GHANTA, EK SATH JOINING HANDS FOR NATION’S CLEANLINESS': 'Cleanliness drive in RO/All Warehouses.',
+            'EK DIN, EK GHANTA, EK SATH JOINING HANDS FOR NATIONS CLEANLINESS': 'Cleanliness drive in RO/All Warehouses.',
             'FOR CREATING AWARENESS': 'Bag distribution at prominent locations',
             'CLEANLINESS TARGET UNIT': 'Cleanliness drive CTUs',
             'SAFAI MITRA WELFARE SCHEME WORKSHOP': 'Workshop for Safaimitra',
