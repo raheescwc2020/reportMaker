@@ -97,7 +97,8 @@ def initialize_database():
         if db.session.execute(db.select(Link)).scalar() is None: 
             print("Seeding initial data...")
             initial_links = [
-                Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
+                Link(name="Recording Issues in ERP WMS", category="WMS", url="https://docs.google.com/spreadsheets/d/1DQbSpk2ZQpA5bp3ngW-qjP811sBX74t0pVS5xZJSCTk/edit?gid=1821339499#gid=1821339499&fvid=993239891"),
+               
                 Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
                 Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
             ]
