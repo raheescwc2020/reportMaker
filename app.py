@@ -7,7 +7,7 @@ import traceback # Added for better error reporting
 # Database imports
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import inspect # <-- ADDED: Import inspect
+from sqlalchemy import inspect # <-- CORRECT: Import inspect
 
 # Reportlab imports
 from reportlab.platypus import SimpleDocTemplate, Image, Table, TableStyle, Spacer, Paragraph
