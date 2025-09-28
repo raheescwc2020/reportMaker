@@ -3,9 +3,10 @@ import json
 import io
 import datetime
 import traceback 
+# CRITICAL: Added missing import for CSV processing
+import csv 
 
 from dotenv import load_dotenv
-# NEW LINE:
 load_dotenv()
 
 # Database imports
@@ -36,14 +37,11 @@ MYSQL_PORT = os.environ.get('MYSQLPORT', '3306')
 MYSQL_DB = os.environ.get('MYSQL_DATABASE', 'railway')
 
 # Construct the URI: mysql+pymysql://user:password@host:port/database
-# We use the public URL variable if the private one isn't available, but default to private for performance.
-DATABASE_URI = os.environ.get(
-    'MYSQL_URL'
-)
+DATABASE_URI = os.environ.get('MYSQL_URL')
 
 if not DATABASE_URI:
     # Construct the URI explicitly using individual variables if the URL isn't set
-    if MYSQL_PASS:
+    if all([MYSQL_USER, MYSQL_PASS, MYSQL_HOST, MYSQL_PORT, MYSQL_DB]):
         DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASS}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
     else:
         # Fallback for local testing or if required variables are missing
@@ -66,7 +64,7 @@ class Link(db.Model):
     """
     Defines the structure for the 'spreadsheet_manager' table.
     """
-    __tablename__ = 'spreasheet_manager' 
+    __tablename__ = 'spreadsheet_manager' 
     
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(100), nullable=False)
@@ -119,25 +117,53 @@ def initialize_database():
             db.session.commit()
             print("Initial links added successfully.")
             
-            # --- MODIFICATION TO DEMONSTRATE DATA RETRIEVAL ---
             # Retrieve the first link added to show that data fetching works
             first_link = db.session.execute(db.select(Link).order_by(Link.id).limit(1)).scalar()
             if first_link:
                 print(f"Verified data retrieval: The first link found is: {first_link.name}")
             else:
                 print("Could not retrieve the first link after seeding.")
-            # --- END MODIFICATION ---
-
+            
             
     except Exception as e:
-        print("\n--- DATABASE INITIALIZATION ERROR ---")
-        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-        print(f"Error: {e}")
-        print(traceback.format_exc())
-        print("-----------------------------------\n")
+        # Get the full traceback string for better error analysis
+        full_traceback = traceback.format_exc()
+        is_operational_error = 'OperationalError' in full_traceback
+        
+        print("\n--- DATABASE INITIALIZATION ERROR: CRITICAL FAILURE ---")
+        print(f"DATABASE TYPE: {'MySQL' if 'mysql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'SQLite (FALLBACK)'}")
+        
+        # Redact password for safe logging
+        safe_uri = app.config['SQLALCHEMY_DATABASE_URI'].replace(MYSQL_PASS, '***REDACTED***') if MYSQL_PASS else app.config['SQLALCHEMY_DATABASE_URI']
+        print(f"ATTEMPTED URI: {safe_uri}")
+
+        if is_operational_error:
+            if 'Access denied' in str(e) or 'Authentication failed' in full_traceback:
+                error_type = "AUTHENTICATION FAILURE"
+                suggestion = "Check **MYSQL_USER** and **MYSQL_ROOT_PASSWORD** variables on your Railway service."
+            elif 'Can\'t connect to MySQL server' in str(e) or 'Connection refused' in full_traceback:
+                error_type = "NETWORK/HOST UNREACHABLE"
+                suggestion = "Check **MYSQLHOST** (must be `mysql.railway.internal`) and **MYSQLPORT**."
+            elif 'Unknown database' in str(e):
+                error_type = "DATABASE NAME ISSUE"
+                suggestion = "Check **MYSQL_DATABASE** variable (must match the name on the Railway MySQL service, usually `railway`)."
+            else:
+                error_type = "GENERAL OPERATIONAL ERROR"
+                suggestion = "Review the full traceback below for specific driver or network issues."
+            
+            print(f"\nSPECIFIC ISSUE: {error_type}")
+            print(f"SUGGESTION: {suggestion}")
+        else:
+            print("\nSPECIFIC ISSUE: UNEXPECTED ERROR DURING INIT/TABLE CREATION")
+            print("SUGGESTION: Error is not a standard connection failure. Review Model or SQLAlchemy versioning.")
+
+        print("-" * 50)
+        print(f"RAW ERROR: {e}")
+        print("FULL TRACEBACK (Consult this in your Railway logs):")
+        print(full_traceback)
+        print("-" * 50)
 
 # --- EXECUTE DB INITIALIZATION ON DEPLOYMENT STARTUP ---
-# This decorator is crucial for Gunicorn (Railway) deployment
 @app.before_request
 def before_request_func():
     """
@@ -208,6 +234,7 @@ REGIONAL_WAREHOUSES = {
 }
 
 UPLOAD_FOLDER = 'uploads'
+# NOTE: User must provide this image in a 'static' folder for the PDF generation to work
 PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png' 
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -329,8 +356,6 @@ def admin_add_link():
 
 
 # --- ROUTING FOR SPREADSHEET MANAGER (Cont.) ---
-
-# ... existing admin_add_link route ...
 
 @app.route('/admin/bulk_upload', methods=['POST'])
 def admin_bulk_upload():
