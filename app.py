@@ -94,7 +94,6 @@ def initialize_database():
             print("Tables created successfully.")
 
         # Seed initial data only if the table is empty
-        # Checking if the table has any records using a simple query
         if db.session.execute(db.select(Link)).scalar() is None: 
             print("Seeding initial data...")
             initial_links = [
@@ -106,9 +105,19 @@ def initialize_database():
             db.session.commit()
             print("Initial links added successfully.")
             
+            # --- MODIFICATION TO DEMONSTRATE DATA RETRIEVAL ---
+            # Retrieve the first link added to show that data fetching works
+            first_link = db.session.execute(db.select(Link).order_by(Link.id).limit(1)).scalar()
+            if first_link:
+                print(f"Verified data retrieval: The first link found is: {first_link.name}")
+            else:
+                print("Could not retrieve the first link after seeding.")
+            # --- END MODIFICATION ---
+
+            
     except Exception as e:
         print("\n--- DATABASE INITIALIZATION ERROR ---")
-        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_SQLALCHEMY_DATABASE_URI']}")
         print(f"Error: {e}")
         print(traceback.format_exc())
         print("-----------------------------------\n")
@@ -142,8 +151,7 @@ def get_links():
     This function correctly uses the Link model to query the underlying table.
     """
     try:
-        # Use the modern Flask-SQLAlchemy/SQLAlchemy 2.0 style to fetch all records
-        # The result is a list of Link objects, ordered by their creation ID.
+        # This is the primary function used by the application to retrieve ALL data.
         return db.session.execute(db.select(Link).order_by(Link.id)).scalars().all()
     except Exception as e:
         print(f"Database fetch error: {e}")
@@ -185,9 +193,6 @@ REGIONAL_WAREHOUSES = {
 }
 
 UPLOAD_FOLDER = 'uploads'
-# NOTE: The user has provided several PNG files, one of which is likely the header image.
-# We will use the generic name as in the original code, assuming the user will place a file named
-# 'pdf_header_template.png' in the 'static' folder for the PDF generation to work.
 PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png' 
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -413,22 +418,17 @@ def generate_pdf():
                 data.append(row)
                 row = []
         if row:
-            # Pad the last row if necessary, though ReportLab handles uneven rows fine
-            # We explicitly pad with spacers for consistent cell alignment if desired, but here we let ReportLab handle it.
             data.append(row)
 
         # Create table for images
-        # Column widths are set to the calculated image width
         image_table = Table(data, colWidths=[img_width] * columns)
         table_style = TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            # Define internal padding (spacing between images)
             ('LEFTPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('RIGHTPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('TOPPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('BOTTOMPADDING', (0, 0), (-1, -1), image_spacing / 2),
-            # Define external margins (from edge of page)
             ('LEFTPADDING', (0, 0), (0, -1), content_margin_left),
             ('RIGHTPADDING', (-1, 0), (-1, -1), content_margin_left),
         ])
@@ -459,7 +459,6 @@ if __name__ == '__main__':
         os.makedirs('uploads')
     
     # --- DB INIT AND SEEDING (Local Only) ---
-    # Call the initialization function once in the main block for local development setup.
     with app.app_context():
         initialize_database()
     # --- DB INIT AND SEEDING END ---
