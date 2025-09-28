@@ -2,6 +2,7 @@ import os
 import json
 import io
 import datetime
+import traceback # Added for better error reporting
 
 # Database imports
 from flask_sqlalchemy import SQLAlchemy
@@ -14,25 +15,92 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
-# IMPORTANT: Need to use mysql+pymysql:// prefix for SQLAlchemy with MySQL
-# We will ensure this is handled by the Railway environment variable or 
-# configure it explicitly if using components from the screenshot variables.
-# However, using the full DATABASE_URL (which usually includes the driver) is best practice.
-
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, g
 
 # --- FLASK APPLICATION SETUP ---
 app = Flask(__name__)
 app.secret_key = 'super_secret_and_complex_key_for_session_management' 
 
 # 1. DATABASE CONFIGURATION
-# This uses the standard DATABASE_URL environment variable provided by Railway.
-# The URL includes the driver, username, password, host, and database name.
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 
-    'sqlite:///links.db' # Fallback for local testing
+# We explicitly construct the connection URI using the environment variables
+# confirmed to be set by the Railway MySQL service, ensuring the pymysql driver is used.
+MYSQL_USER = os.environ.get('MYSQLUSER', 'root')
+MYSQL_PASS = os.environ.get('MYSQL_ROOT_PASSWORD') # Use the most secure password variable
+MYSQL_HOST = os.environ.get('MYSQLHOST', 'localhost')
+MYSQL_PORT = os.environ.get('MYSQLPORT', '3306')
+MYSQL_DB = os.environ.get('MYSQL_DATABASE', 'railway')
+
+# Construct the URI: mysql+pymysql://user:password@host:port/database
+# We use the public URL variable if the private one isn't available, but default to private for performance.
+DATABASE_URI = os.environ.get(
+    'MYSQL_URL'
 )
+
+if not DATABASE_URI:
+    # Construct the URI explicitly using individual variables if the URL isn't set
+    if MYSQL_PASS:
+        DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASS}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+    else:
+        # Fallback for local testing or if required variables are missing
+        DATABASE_URI = 'sqlite:///links.db' 
+        print("WARNING: Using SQLite fallback. Database URI could not be constructed from environment variables.")
+
+
+# Apply the constructed URI to Flask-SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
+
+# Suppress deprecation warning
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
+
 db = SQLAlchemy(app)
+
+# --- DATABASE INITIALIZATION FUNCTION ---
+def initialize_database():
+    """
+    Creates tables if they don't exist and seeds initial data.
+    This runs once, on the first request, ensuring tables are ready for deployment environments.
+    """
+    try:
+        # Check if the table already exists by attempting to query
+        if db.engine.dialect.has_table(db.engine, 'spreadsheet_manager'):
+            print("Database table 'spreadsheet_manager' already exists. Skipping creation.")
+        else:
+            print("Database table 'spreadsheet_manager' not found. Creating table...")
+            db.create_all()
+            print("Tables created successfully.")
+
+        # Seed initial data only if the table is empty
+        if db.session.execute(db.select(Link)).scalar() is None: 
+            print("Seeding initial data...")
+            initial_links = [
+                Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
+                Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
+                Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
+            ]
+            db.session.add_all(initial_links)
+            db.session.commit()
+            print("Initial links added successfully.")
+            
+    except Exception as e:
+        print("\n--- DATABASE INITIALIZATION ERROR ---")
+        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        print(f"Error: {e}")
+        print(traceback.format_exc())
+        print("-----------------------------------\n")
+
+# --- EXECUTE DB INITIALIZATION ON DEPLOYMENT STARTUP ---
+# This decorator is crucial for Gunicorn (Railway) deployment
+@app.before_request
+def before_request_func():
+    """
+    A simpler alternative to @app.before_first_request for modern Flask/Gunicorn deployments.
+    Uses a global flag (g.db_initialized) to ensure it runs only once per process startup.
+    """
+    if not getattr(g, 'db_initialized', False):
+        with app.app_context():
+            initialize_database()
+        g.db_initialized = True
+
 
 # --- DATABASE MODEL (Schema) ---
 
@@ -64,10 +132,11 @@ def get_links():
     """Fetches all stored links from the database (spreadsheet_manager table)."""
     # Queries all Link objects, ordered by ID (creation order)
     try:
+        # Note: Query will now fail gracefully if connection is truly bad
         return db.session.execute(db.select(Link).order_by(Link.id)).scalars().all()
     except Exception as e:
         print(f"Database fetch error: {e}")
-        flash("Could not connect to or query the database.", 'error')
+        flash("Could not connect to or query the database. Check console logs for details.", 'error')
         return []
 
 # --- SWACHHATHA REPORT CONFIG/DATA ---
@@ -367,22 +436,22 @@ if __name__ == '__main__':
     if not os.path.exists('uploads'):
         os.makedirs('uploads')
     
-    # --- DB INIT AND SEEDING ---
+    # --- DB INIT AND SEEDING (Local Only) ---
     with app.app_context():
         # This creates the 'spreadsheet_manager' table if it doesn't exist.
         db.create_all()
         
         # This seeds initial data if the table is empty.
         if db.session.execute(db.select(Link)).scalar() is None: 
-             print("Database table 'spreadsheet_manager' is empty. Adding initial links.")
-             initial_links = [
-                Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
-                Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
-                Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
-             ]
-             db.session.add_all(initial_links)
-             db.session.commit()
-             print("Initial links added successfully.")
+              print("Database table 'spreadsheet_manager' is empty. Adding initial links.")
+              initial_links = [
+                  Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
+                  Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
+                  Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
+              ]
+              db.session.add_all(initial_links)
+              db.session.commit()
+              print("Initial links added successfully.")
     # --- DB INIT AND SEEDING END ---
         
     app.run(debug=True)
