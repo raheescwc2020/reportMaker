@@ -2,12 +2,12 @@ import os
 import json
 import io
 import datetime
-import traceback # Added for better error reporting
+import traceback 
 
 # Database imports
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import inspect # <-- CORRECT: Import inspect
+from sqlalchemy import inspect 
 
 # Reportlab imports
 from reportlab.platypus import SimpleDocTemplate, Image, Table, TableStyle, Spacer, Paragraph
@@ -55,6 +55,24 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+
+# --- DATABASE MODEL (Schema) ---
+
+class Link(db.Model):
+    """
+    Defines the structure for the 'spreadsheet_manager' table.
+    """
+    __tablename__ = 'spreadsheet_manager' 
+    
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(100), nullable=False)
+    category: Mapped[str] = mapped_column(db.String(50), nullable=False)
+    url: Mapped[str] = mapped_column(db.String(255), unique=True, nullable=False)
+
+    def __repr__(self):
+        return f'<Link {self.name}>'
+
+
 # --- DATABASE INITIALIZATION FUNCTION ---
 def initialize_database():
     """
@@ -62,7 +80,7 @@ def initialize_database():
     This runs once, on the first request, ensuring tables are ready for deployment environments.
     """
     try:
-        # --- FIX APPLIED HERE: Use inspect for public API to check for table existence ---
+        # Use inspect for public API to check for table existence
         engine = db.engine
         inspector = inspect(engine)
         table_exists = 'spreadsheet_manager' in inspector.get_table_names()
@@ -72,11 +90,11 @@ def initialize_database():
             print("Database table 'spreadsheet_manager' already exists. Skipping creation.")
         else:
             print("Database table 'spreadsheet_manager' not found. Creating table...")
-            # Using create_all() is still fine in Flask-SQLAlchemy context
             db.create_all()
             print("Tables created successfully.")
 
         # Seed initial data only if the table is empty
+        # Checking if the table has any records using a simple query
         if db.session.execute(db.select(Link)).scalar() is None: 
             print("Seeding initial data...")
             initial_links = [
@@ -109,23 +127,6 @@ def before_request_func():
         g.db_initialized = True
 
 
-# --- DATABASE MODEL (Schema) ---
-
-class Link(db.Model):
-    """
-    Defines the structure for the 'spreadsheet_manager' table.
-    """
-    __tablename__ = 'spreadsheet_manager' 
-    
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(db.String(100), nullable=False)
-    category: Mapped[str] = mapped_column(db.String(50), nullable=False)
-    url: Mapped[str] = mapped_column(db.String(255), unique=True, nullable=False)
-
-    def __repr__(self):
-        return f'<Link {self.name}>'
-
-
 # --- SPREADSHEET MANAGER CONFIG/DATA ---
 ADMIN_USER = "admin"
 ADMIN_PASS = "securepassword123"
@@ -136,14 +137,17 @@ def is_admin():
     return session.get('logged_in', False)
 
 def get_links():
-    """Fetches all stored links from the database (spreadsheet_manager table)."""
-    # Queries all Link objects, ordered by ID (creation order)
+    """
+    Fetches all stored links from the database (spreadsheet_manager table).
+    This function correctly uses the Link model to query the underlying table.
+    """
     try:
-        # Note: Query will now fail gracefully if connection is truly bad
+        # Use the modern Flask-SQLAlchemy/SQLAlchemy 2.0 style to fetch all records
+        # The result is a list of Link objects, ordered by their creation ID.
         return db.session.execute(db.select(Link).order_by(Link.id)).scalars().all()
     except Exception as e:
         print(f"Database fetch error: {e}")
-        # The original code had a flash message here, keeping it for continuity
+        # Flash message for the user interface
         flash("Could not connect to or query the database. Check console logs for details.", 'error')
         return []
 
@@ -181,6 +185,9 @@ REGIONAL_WAREHOUSES = {
 }
 
 UPLOAD_FOLDER = 'uploads'
+# NOTE: The user has provided several PNG files, one of which is likely the header image.
+# We will use the generic name as in the original code, assuming the user will place a file named
+# 'pdf_header_template.png' in the 'static' folder for the PDF generation to work.
 PDF_TEMPLATE_IMAGE = 'static/pdf_header_template.png' 
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -195,10 +202,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/spreadsheets')
 def public_directory():
     """The Public View: Shows all links in a searchable table, fetching data from the database."""
+    # Data is retrieved using the get_links() function which queries the spreadsheet_manager table
     return render_template(
         'combined_dashboard.html', 
         page_title="Spreadsheet Directory",
-        links=get_links(), # Fetches from DB
+        links=get_links(), # Fetches data from spreadsheet_manager via Link model
         is_admin=is_admin(),
         view_name='spreadsheets_public'
     )
@@ -252,8 +260,9 @@ def admin_add_link():
                 return redirect(url_for('admin_add_link')) 
             except Exception as e:
                 db.session.rollback()
+                # Check for common unique constraint violations
                 if 'Duplicate entry' in str(e) or 'IntegrityError' in str(e):
-                    flash('Error: A link with that URL already exists.', 'error')
+                    flash('Error: A link with that URL already exists in the database.', 'error')
                 else:
                     flash(f'Error adding link: {e}', 'error')
         else:
@@ -264,7 +273,7 @@ def admin_add_link():
         page_title="Admin Console: Add Link",
         is_admin=is_admin(),
         view_name='admin_add_view',
-        links=get_links()
+        links=get_links() # Fetches data from spreadsheet_manager via Link model
     )
 
 @app.route('/admin/logout')
@@ -404,17 +413,22 @@ def generate_pdf():
                 data.append(row)
                 row = []
         if row:
+            # Pad the last row if necessary, though ReportLab handles uneven rows fine
+            # We explicitly pad with spacers for consistent cell alignment if desired, but here we let ReportLab handle it.
             data.append(row)
 
         # Create table for images
+        # Column widths are set to the calculated image width
         image_table = Table(data, colWidths=[img_width] * columns)
         table_style = TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            # Define internal padding (spacing between images)
             ('LEFTPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('RIGHTPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('TOPPADDING', (0, 0), (-1, -1), image_spacing / 2),
             ('BOTTOMPADDING', (0, 0), (-1, -1), image_spacing / 2),
+            # Define external margins (from edge of page)
             ('LEFTPADDING', (0, 0), (0, -1), content_margin_left),
             ('RIGHTPADDING', (-1, 0), (-1, -1), content_margin_left),
         ])
@@ -445,21 +459,9 @@ if __name__ == '__main__':
         os.makedirs('uploads')
     
     # --- DB INIT AND SEEDING (Local Only) ---
+    # Call the initialization function once in the main block for local development setup.
     with app.app_context():
-        # This creates the 'spreadsheet_manager' table if it doesn't exist.
-        db.create_all()
-        
-        # This seeds initial data if the table is empty.
-        if db.session.execute(db.select(Link)).scalar() is None: 
-              print("Database table 'spreadsheet_manager' is empty. Adding initial links.")
-              initial_links = [
-                  Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
-                  Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
-                  Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
-              ]
-              db.session.add_all(initial_links)
-              db.session.commit()
-              print("Initial links added successfully.")
+        initialize_database()
     # --- DB INIT AND SEEDING END ---
         
     app.run(debug=True)
