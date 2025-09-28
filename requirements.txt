@@ -1,17 +1,16 @@
-Environment Constraints (As requested)
+
 pip>=23.2
 setuptools>=68.2.2
 
-Core Framework and Web Server
+
 Flask
 gunicorn
 
-Database (SQLAlchemy with MySQL)
+
 Flask-SQLAlchemy
 pymysql
 
-PDF Generation
+
 reportlab
 
-Utility (Good practice for local environment variables)
 python-dotenv
