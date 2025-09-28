@@ -7,6 +7,7 @@ import traceback # Added for better error reporting
 # Database imports
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import inspect # <-- ADDED: Import inspect
 
 # Reportlab imports
 from reportlab.platypus import SimpleDocTemplate, Image, Table, TableStyle, Spacer, Paragraph
@@ -61,11 +62,17 @@ def initialize_database():
     This runs once, on the first request, ensuring tables are ready for deployment environments.
     """
     try:
+        # --- FIX APPLIED HERE: Use inspect for public API to check for table existence ---
+        engine = db.engine
+        inspector = inspect(engine)
+        table_exists = 'spreadsheet_manager' in inspector.get_table_names()
+
         # Check if the table already exists by attempting to query
-        if db.engine.dialect.has_table(db.engine, 'spreadsheet_manager'):
+        if table_exists:
             print("Database table 'spreadsheet_manager' already exists. Skipping creation.")
         else:
             print("Database table 'spreadsheet_manager' not found. Creating table...")
+            # Using create_all() is still fine in Flask-SQLAlchemy context
             db.create_all()
             print("Tables created successfully.")
 
@@ -136,6 +143,7 @@ def get_links():
         return db.session.execute(db.select(Link).order_by(Link.id)).scalars().all()
     except Exception as e:
         print(f"Database fetch error: {e}")
+        # The original code had a flash message here, keeping it for continuity
         flash("Could not connect to or query the database. Check console logs for details.", 'error')
         return []
 
