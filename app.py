@@ -4,6 +4,10 @@ import io
 import datetime
 import traceback 
 
+
+# NEW LINE:
+load_dotenv()
+
 # Database imports
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
