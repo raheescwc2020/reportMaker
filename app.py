@@ -99,8 +99,8 @@ def initialize_database():
             initial_links = [
                 Link(name="Recording Issues in ERP WMS", category="WMS", url="https://docs.google.com/spreadsheets/d/1DQbSpk2ZQpA5bp3ngW-qjP811sBX74t0pVS5xZJSCTk/edit?gid=1821339499#gid=1821339499&fvid=993239891"),
                
-                Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
-                Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker")
+                Link(name="Role Assignment", category="WMS", url="https://docs.google.com/spreadsheets/d/1QRxhJO31zf0bm34MczA6aqv3tGZm2lMVrtippuLKM-w/edit?usp=sharing"),
+                Link(name="SwachathaHiSeva2025 Activity Status Report", category="Swachatha", url="https://docs.google.com/spreadsheets/d/1kN4ukYnlZNegB8-hreNOZZLbKTDDuHzZM95MDFkyj_U/edit?usp=sharing")
             ]
             db.session.add_all(initial_links)
             db.session.commit()
