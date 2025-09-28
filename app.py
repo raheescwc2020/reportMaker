@@ -4,7 +4,7 @@ import io
 import datetime
 import traceback 
 
-
+from dotenv import load_dotenv
 # NEW LINE:
 load_dotenv()
 
