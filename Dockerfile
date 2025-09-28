@@ -1,5 +1,6 @@
 # Start with an official Python base image
-FROM python:3.12-slim
+# Using a specific tag to ensure cache is cleared for dependency installation
+FROM python:3.12.3-slim 
 
 # Install system dependencies required for reportlab, common image libraries, and MySQL connection
 RUN apt-get update && apt-get install -y \
@@ -12,8 +13,7 @@ RUN apt-get update && apt-get install -y \
     libopenjp2-7-dev \
     libtiff-dev \
     libwebp-dev \
-    # MySQL client libraries are often needed for pymysql to work robustly, 
-    # even if not explicitly required by Python libs
+    # MySQL client libraries are often needed for pymysql to work robustly
     default-libmysqlclient-dev \
     # Clean up APT cache to reduce image size
     && rm -rf /var/lib/apt/lists/*
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the requirements file and install dependencies first
-# This ensures that 'Flask-SQLAlchemy' and 'pymysql' are definitely installed
+# This will execute fully and install Flask-SQLAlchemy due to the cache break above
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -1,7 +1,17 @@
+Environment Constraints (As requested)
 pip>=23.2
 setuptools>=68.2.2
-# The rest of your dependencies follow below...
+
+Core Framework and Web Server
 Flask
-ReportLab
 gunicorn
-# ...etc.
+
+Database (SQLAlchemy with MySQL)
+Flask-SQLAlchemy
+pymysql
+
+PDF Generation
+reportlab
+
+Utility (Good practice for local environment variables)
+python-dotenv
