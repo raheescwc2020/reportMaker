@@ -66,7 +66,7 @@ class Link(db.Model):
     """
     Defines the structure for the 'spreadsheet_manager' table.
     """
-    __tablename__ = 'spreadsheet_manager' 
+    __tablename__ = 'spreasheet_manager' 
     
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(100), nullable=False)
