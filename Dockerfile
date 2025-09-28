@@ -1,8 +1,7 @@
 # Start with an official Python base image
-# Using a specific, well-tested version for better stability
 FROM python:3.12-slim
 
-# Install system dependencies required for pycairo and other common libraries
+# Install system dependencies required for reportlab, common image libraries, and others
 # The `-y` flag is added to automatically approve installations
 RUN apt-get update && apt-get install -y \
     libcairo2-dev \
@@ -23,16 +22,12 @@ WORKDIR /app
 # Copy the requirements file into the container at the working directory
 COPY requirements.txt .
 
-# Install the Python dependencies
+# Install the Python dependencies (including gunicorn, Flask-SQLAlchemy, reportlab, and pymysql)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application code into the container
 COPY . .
 
-# Set the command to run your application using the shell form for variable expansion.
-# The ${PORT:-8000} syntax uses the PORT environment variable if available,
-# otherwise, it defaults to 8000.
-
-
-
+# Command to run your application using gunicorn.
+# It binds to 0.0.0.0 and uses the $PORT environment variable provided by Railway (defaulting to 8000).
 CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app:app
