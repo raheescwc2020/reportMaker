@@ -97,10 +97,19 @@ def initialize_database():
         if db.session.execute(db.select(Link)).scalar() is None: 
             print("Seeding initial data...")
             initial_links = [
-                Link(name="Recording Issues in ERP WMS", category="WMS", url="https://docs.google.com/spreadsheets/d/1DQbSpk2ZQpA5bp3ngW-qjP811sBX74t0pVS5xZJSCTk/edit?gid=1821339499#gid=1821339499&fvid=993239891"),
-               
-                Link(name="Role Assignment", category="WMS", url="https://docs.google.com/spreadsheets/d/1QRxhJO31zf0bm34MczA6aqv3tGZm2lMVrtippuLKM-w/edit?usp=sharing"),
-                Link(name="SwachathaHiSeva2025 Activity Status Report", category="Swachatha", url="https://docs.google.com/spreadsheets/d/1kN4ukYnlZNegB8-hreNOZZLbKTDDuHzZM95MDFkyj_U/edit?usp=sharing")
+                Link(name="Q4 Sales Metrics - Finance Seed", category="Finance", url="https://docs.google.com/spreadsheets/d/initial_seed_finance_q4"),
+                Link(name="HR Onboarding Checklist - HR Seed", category="HR", url="https://docs.google.com/spreadsheets/d/initial_seed_hr_onboarding"),
+                Link(name="RV Solutions Project Status", category="Project Management", url="https://docs.google.com/spreadsheets/d/rv_project_status_tracker"),
+                Link(name="Marketing Budget Tracker 2025", category="Marketing", url="https://docs.google.com/spreadsheets/d/marketing_budget_2025"),
+                Link(name="IT Infrastructure Inventory", category="IT", url="https://docs.google.com/spreadsheets/d/it_inventory_list"),
+                Link(name="Client Satisfaction Survey Results", category="Customer Service", url="https://docs.google.com/spreadsheets/d/satisfaction_survey_data"),
+                Link(name="Supply Chain Logistics Plan Q3", category="Operations", url="https://docs.google.com/spreadsheets/d/q3_logistics_plan"),
+                Link(name="Monthly Expenses Report June 2025", category="Finance", url="https://docs.google.com/spreadsheets/d/june_expenses_2025"),
+                Link(name="Team Performance Review Tracker", category="HR", url="https://docs.google.com/spreadsheets/d/performance_tracker_hr"),
+                Link(name="Social Media Campaign Schedule", category="Marketing", url="https://docs.google.com/spreadsheets/d/social_media_schedule"),
+                Link(name="New Product Development Roadmap", category="Project Management", url="https://docs.google.com/spreadsheets/d/product_roadmap_v2"),
+                Link(name="Employee Training Records 2024", category="HR", url="https://docs.google.com/spreadsheets/d/training_records_2024"),
+                Link(name="Vendor Contact List - Operations", category="Operations", url="https://docs.google.com/spreadsheets/d/vendor_contact_list_ops"),
             ]
             db.session.add_all(initial_links)
             db.session.commit()
@@ -118,7 +127,7 @@ def initialize_database():
             
     except Exception as e:
         print("\n--- DATABASE INITIALIZATION ERROR ---")
-        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_SQLALCHEMY_DATABASE_URI']}")
+        print(f"Failed to connect to or initialize database using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
         print(f"Error: {e}")
         print(traceback.format_exc())
         print("-----------------------------------\n")
@@ -140,6 +149,7 @@ def before_request_func():
 # --- SPREADSHEET MANAGER CONFIG/DATA ---
 ADMIN_USER = "admin"
 ADMIN_PASS = "securepassword123"
+LINKS_PER_PAGE = 10 # New constant for pagination
 
 # Spreadsheet Helper Functions
 def is_admin():
@@ -207,15 +217,40 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/')
 @app.route('/spreadsheets')
 def public_directory():
-    """The Public View: Shows all links in a searchable table, fetching data from the database."""
-    # Data is retrieved using the get_links() function which queries the spreadsheet_manager table
-    return render_template(
-        'combined_dashboard.html', 
-        page_title="Spreadsheet Directory",
-        links=get_links(), # Fetches data from spreadsheet_manager via Link model
-        is_admin=is_admin(),
-        view_name='spreadsheets_public'
-    )
+    """The Public View: Shows all links in a searchable table, fetching data from the database with pagination."""
+    
+    # 1. Get current page number from URL query, default to 1
+    page = request.args.get('page', 1, type=int)
+    
+    try:
+        # 2. Use paginate to fetch a subset of links
+        pagination = db.paginate(
+            db.select(Link).order_by(Link.id),
+            page=page,
+            per_page=LINKS_PER_PAGE,
+            error_out=False # Set to False so it doesn't 404 if page is out of range
+        )
+        
+        # 3. Pass the pagination object and the actual items (links) to the template
+        return render_template(
+            'combined_dashboard.html', 
+            page_title="Spreadsheet Directory",
+            links=pagination.items,
+            pagination=pagination, # Pass the full pagination object
+            is_admin=is_admin(),
+            view_name='spreadsheets_public'
+        )
+    except Exception as e:
+        print(f"Database pagination error: {e}")
+        flash("Could not fetch paginated data from the database.", 'error')
+        return render_template(
+            'combined_dashboard.html', 
+            page_title="Spreadsheet Directory",
+            links=[], 
+            pagination=None,
+            is_admin=is_admin(),
+            view_name='spreadsheets_public'
+        )
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -243,8 +278,12 @@ def admin_login():
 
 @app.route('/admin/add', methods=['GET', 'POST'])
 def admin_add_link():
-    """Admin Console: Add New Link Form. Saves new links to the 'spreadsheet_manager' table."""
+    """
+    Admin Console: Add New Link Form. 
+    Handles both displaying the form (GET) and saving new links to the 'spreadsheet_manager' table (POST).
+    """
     if not is_admin():
+        # This prevents unauthorized users from even seeing or submitting the form
         flash('You must log in to access the admin console.', 'warning')
         return redirect(url_for('admin_login'))
 
@@ -263,10 +302,11 @@ def admin_add_link():
                 db.session.add(new_link)
                 db.session.commit()
                 flash(f'Link "{link_name}" added successfully to the database!', 'success')
+                # Redirect back to the form after successful submission
                 return redirect(url_for('admin_add_link')) 
             except Exception as e:
                 db.session.rollback()
-                # Check for common unique constraint violations
+                # Check for common unique constraint violations (e.g., duplicate URL)
                 if 'Duplicate entry' in str(e) or 'IntegrityError' in str(e):
                     flash('Error: A link with that URL already exists in the database.', 'error')
                 else:
@@ -274,12 +314,13 @@ def admin_add_link():
         else:
             flash('All fields are required.', 'error')
 
+    # For GET request or POST request with validation errors:
     return render_template(
         'combined_dashboard.html', 
         page_title="Admin Console: Add Link",
         is_admin=is_admin(),
         view_name='admin_add_view',
-        links=get_links() # Fetches data from spreadsheet_manager via Link model
+        links=get_links() # Fetch existing links for a list view on the admin page
     )
 
 @app.route('/admin/logout')
