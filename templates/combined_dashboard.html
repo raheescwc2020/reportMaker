@@ -162,9 +162,6 @@
                         </form>
                     </div>
 
-                    <div class="lg:col-span-1">
-                        {% include '_spreadsheet_table.html' %} 
-                    </div>
 
                     <div class="lg:col-span-1 bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600 h-fit">
                         <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-primary">Bulk Upload Links (CSV)</h3>
@@ -211,19 +208,7 @@
                         </select>
                     </div>
 
-                   {% elif view_name == 'spreadsheets_public' %}
                 <div class="bg-card-dark p-6 rounded-xl shadow-lg border border-gray-600">
-                    <h3 class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2 text-primary">Available Spreadsheets</h3>
-
-                    <div class="mb-6 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                        <input type="text" id="searchBar" onkeyup="filterAndPaginate()" placeholder="Search by Name or Category..."
-                            class="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-200">
-                        
-                        <select id="categoryFilter" onchange="filterAndPaginate()" 
-                            class="sm:w-1/3 w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 appearance-none focus:ring-primary focus:border-primary">
-                            <option value="">All Categories</option>
-                            </select>
-                    </div>
 
                     <div id="dataTableContainer" class="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-lg border border-gray-700">
                         <table class="min-w-full divide-y divide-gray-700" id="linkTable">
