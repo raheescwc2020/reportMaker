@@ -468,15 +468,15 @@ def swachatha_form():
     )
 
 # FIX 3: Extracted PDF generation logic into a helper function
-def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy, image_paths):
+def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy,description, image_paths):
     """Internal function to handle ReportLab story creation."""
     activity_name_map = {
         'SWACHTA KI BHAGIDARI WITH PUBLIC PARTICIPANTS': 'Banner Display and Pledge',
-        'AWARENESS PROGRAM': 'Awareness programmes for labours and stake holders at the Warehouses',
-        'HYGIENE FOCUSED': 'Distribution of Dustbin, Gloves, Mask etc to various units like health centres, anganwadis etc.',
-        'CREATING AWARENESS IN SCHOOL CHILDREN': 'Drawing or Essay writing Competition in schools',
+        'AWARENESS PROGRAM': 'Awareness programmes for labours and stake holders',
+        'HYGIENE FOCUSED': 'Distribution of Dustbin, Gloves, Mask etc to anganwadis',
+        'CREATING AWARENESS IN SCHOOL CHILDREN': 'Drawing  Competition in Schools',
         'SAFAI MITRA SURAKSHA SHIVIR': 'Eye Check up camp for Safaimitra',
-        'EK DIN, EK GHANTA, EK SATH - JOINING HANDS FOR NATIONS CLEANLINESS': 'Cleanliness drive in RO/All Warehouses.',
+        'EK DIN, EK GHANTA, EK SATH - JOINING HANDS FOR NATIONS CLEANLINESS': 'Cleanliness drive',
         'FOR CREATING AWARENESS': 'Bag distribution at prominent locations',
         'CLEANLINESS TARGET UNIT': 'Cleanliness drive CTUs',
         'SAFAI MITRA WELFARE SCHEME WORKSHOP': 'Workshop for Safaimitra',
@@ -488,6 +488,9 @@ def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy
     styles = getSampleStyleSheet()
     activity_name = activity_name_map.get(activity, 'N/A')
 
+    LINE_SPACER = 0.15 * inch
+
+
     # Add header image
     if os.path.exists(PDF_TEMPLATE_IMAGE):
         header_image_width = letter[0]
@@ -498,14 +501,17 @@ def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy
 
     # Define styles
     content_margin_left = 0.5 * inch
+ 
+
     header_style = ParagraphStyle(
         'UnderlinedHeader',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
         fontSize=14,
         leading=16,
-        alignment=TA_CENTER,
-        underline=True
+        alignment=TA_CENTER, # Centered
+        underline=True,
+        spaceAfter=0, # Remove default space to control it with Spacer
     )
     activity_name_style = ParagraphStyle(
         'BoldActivityName',
@@ -513,7 +519,18 @@ def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy
         fontName='Helvetica-Bold',
         fontSize=12,
         leading=14,
-        alignment=TA_CENTER
+        alignment=TA_CENTER, # Centered
+        spaceAfter=5, # Remove default space
+    )
+    centered_text_style = ParagraphStyle(
+        'CenteredText',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        spaceAfter=7,
+        leading=12,
+        alignment=TA_CENTER, # Centered
+         # Remove default space
     )
     subheader_style = ParagraphStyle(
         'Subheader',
@@ -526,6 +543,8 @@ def _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy
     # Add text content
     story.append(Paragraph(f'{activity}', header_style))
     story.append(Paragraph(f'{activity_name}', activity_name_style))
+    story.append(Paragraph(f'{description}', centered_text_style))
+
     story.append(Paragraph(f'<b>Location:</b> {warehouse} under {region} Region | <b>Date:</b> {date_str_dd_mm_yyyy}', subheader_style))
     story.append(Spacer(1, 0.2 * inch))
 
@@ -573,6 +592,7 @@ def generate_pdf():
     activity = request.form.get('activity')
     region = request.form.get('region')
     warehouse = request.form.get('warehouse')
+    description =  request.form.get('description', '')
     date_str_yyyy_mm_dd = request.form.get('date')
     images = request.files.getlist('images')
 
@@ -606,7 +626,7 @@ def generate_pdf():
         )
         
         # FIX 3: Use the refactored function
-        story = _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy, image_paths)
+        story = _create_swachatha_pdf_story(activity, region, warehouse, date_str_dd_mm_yyyy, description, image_paths)
         
         doc.build(story)
 
