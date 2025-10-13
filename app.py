@@ -178,8 +178,8 @@ def before_request_func():
 
 
 # --- SPREADSHEET MANAGER CONFIG/DATA ---
-ADMIN_USER = "admin"
-ADMIN_PASS = "securepassword123"
+ADMIN_USER = "kochi2025"
+ADMIN_PASS = "COK.ro@961"
 LINKS_PER_PAGE = 10 # New constant for pagination
 
 # Spreadsheet Helper Functions
